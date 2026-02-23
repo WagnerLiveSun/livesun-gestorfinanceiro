@@ -65,28 +65,28 @@ def login():
         return redirect(url_for('dashboard.index'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if not username or not password:
-            flash('Preencha usuário e senha', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        user = User.query.filter_by(username=username).first()
-        
-        if user is None or not user.check_password(password):
-            flash('Usuário ou senha inválidos', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        if not user.is_active:
-            flash('Usuário inativo', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        login_user(user, remember=request.form.get('remember'))
-        flash(f'Bem-vindo, {user.full_name or user.username}!', 'success')
-        
-        next_page = request.args.get('next')
-        return redirect(next_page) if next_page else redirect(url_for('dashboard.index'))
+            try:
+                username = request.form.get('username')
+                password = request.form.get('password')
+                if not username or not password:
+                    flash('Preencha usuário e senha', 'danger')
+                    return redirect(url_for('auth.login'))
+                user = User.query.filter_by(username=username).first()
+                if user is None or not user.check_password(password):
+                    flash('Usuário ou senha inválidos', 'danger')
+                    return redirect(url_for('auth.login'))
+                if not user.is_active:
+                    flash('Usuário inativo', 'danger')
+                    return redirect(url_for('auth.login'))
+                login_user(user, remember=request.form.get('remember'))
+                flash(f'Bem-vindo, {user.full_name or user.username}!', 'success')
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('dashboard.index'))
+            except Exception as e:
+                import logging
+                logging.exception('Erro ao processar login:')
+                flash('Erro interno ao processar login. Tente novamente ou contate o suporte.', 'danger')
+                return redirect(url_for('auth.login'))
     
     return render_template('auth/login.html')
 
