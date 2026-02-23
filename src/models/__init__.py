@@ -1,8 +1,11 @@
 
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+
+db = SQLAlchemy()
 
 # Modelo Empresa para multi-tenant
 class Empresa(db.Model):
@@ -15,8 +18,6 @@ class Empresa(db.Model):
 
     def __repr__(self):
         return f'<Empresa {self.nome}>'
-
-db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     """User model for authentication"""
