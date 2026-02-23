@@ -1,0 +1,149 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required
+from src.models import db, ContaBanco, FluxoContaModel
+
+contas_banco_bp = Blueprint('contas_banco', __name__, url_prefix='/contas-banco')
+
+
+@contas_banco_bp.route('/')
+@login_required
+def index():
+    """List all bank accounts"""
+    page = request.args.get('page', 1, type=int)
+    
+    pagination = ContaBanco.query.paginate(page=page, per_page=20)
+    contas = pagination.items
+    
+    return render_template(
+        'contas_banco/index.html',
+        contas=contas,
+        pagination=pagination
+    )
+
+
+@contas_banco_bp.route('/nova', methods=['GET', 'POST'])
+@login_required
+def criar():
+    """Create new bank account"""
+    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
+    
+    if request.method == 'POST':
+        try:
+            conta = ContaBanco(
+                nome=request.form.get('nome'),
+                banco=request.form.get('banco'),
+                agencia=request.form.get('agencia'),
+                numero_conta=request.form.get('numero_conta'),
+                dv=request.form.get('dv'),
+                tipo=request.form.get('tipo'),
+                fluxo_conta_id=request.form.get('fluxo_conta_id', type=int),
+                saldo_inicial=request.form.get('saldo_inicial', type=float),
+                ativo=request.form.get('ativo') == 'on'
+            )
+            
+            db.session.add(conta)
+            db.session.commit()
+            
+            flash(f'Conta bancária {conta.nome} criada com sucesso', 'success')
+            return redirect(url_for('contas_banco.index'))
+        
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao criar conta bancária: {str(e)}', 'danger')
+    
+    return render_template(
+        'contas_banco/form.html',
+        action='criar',
+        contas_fluxo=contas_fluxo
+    )
+
+
+@contas_banco_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar(id):
+    """Edit bank account"""
+    conta = ContaBanco.query.get_or_404(id)
+    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
+    
+    if request.method == 'POST':
+        try:
+            conta.nome = request.form.get('nome')
+            conta.banco = request.form.get('banco')
+            conta.agencia = request.form.get('agencia')
+            conta.numero_conta = request.form.get('numero_conta')
+            conta.dv = request.form.get('dv')
+            conta.tipo = request.form.get('tipo')
+            conta.fluxo_conta_id = request.form.get('fluxo_conta_id', type=int)
+            conta.saldo_inicial = request.form.get('saldo_inicial', type=float)
+            conta.ativo = request.form.get('ativo') == 'on'
+            
+            db.session.commit()
+            
+            flash(f'Conta bancária {conta.nome} atualizada com sucesso', 'success')
+            return redirect(url_for('contas_banco.index'))
+        
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao atualizar conta bancária: {str(e)}', 'danger')
+    
+    return render_template(
+        'contas_banco/form.html',
+        action='editar',
+        conta=conta,
+        contas_fluxo=contas_fluxo
+    )
+
+
+@contas_banco_bp.route('/<int:id>/ver')
+@login_required
+def ver(id):
+    """View bank account details"""
+    conta = ContaBanco.query.get_or_404(id)
+    lancamentos = conta.lancamentos.order_by('data_evento DESC').limit(20).all()
+    
+    return render_template(
+        'contas_banco/details.html',
+        conta=conta,
+        lancamentos=lancamentos
+    )
+
+
+@contas_banco_bp.route('/<int:id>/deletar', methods=['POST'])
+@login_required
+def deletar(id):
+    """Delete bank account"""
+    conta = ContaBanco.query.get_or_404(id)
+    
+    try:
+        conta.ativo = False
+        db.session.commit()
+        flash(f'Conta bancária {conta.nome} desativada com sucesso', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao deletar conta bancária: {str(e)}', 'danger')
+    
+    return redirect(url_for('contas_banco.index'))
+
+
+@contas_banco_bp.route('/api/search')
+@login_required
+def api_search():
+    """API for bank accounts search"""
+    termo = request.args.get('q', '')
+    
+    query = ContaBanco.query.filter(ContaBanco.ativo == True)
+    
+    if termo:
+        query = query.filter(
+            (ContaBanco.nome.ilike(f'%{termo}%')) |
+            (ContaBanco.numero_conta.ilike(f'%{termo}%'))
+        )
+    
+    contas = query.limit(10).all()
+    
+    return jsonify([{
+        'id': c.id,
+        'text': f'{c.nome} - {c.banco}',
+        'nome': c.nome,
+        'banco': c.banco
+    } for c in contas])

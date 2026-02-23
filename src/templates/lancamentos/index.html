@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+
+{% block title %}Lançamentos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold" style="color: #f9fafb;">Lançamentos</h2>
+    <a href="{{ url_for('lancamentos.criar') }}" class="btn ls-btn-primary">
+        <i class="fas fa-plus"></i> Novo Lançamento
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="ls-card p-4 mb-4">
+    <form method="GET" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                <option value="">Todos</option>
+                <option value="aberto" {% if status == 'aberto' %}selected{% endif %}>Aberto</option>
+                <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
+                <option value="vencido" {% if status == 'vencido' %}selected{% endif %}>Vencido</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-control" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                <option value="">Todos</option>
+                <option value="P" {% if tipo == 'P' %}selected{% endif %}>Pagamento</option>
+                <option value="R" {% if tipo == 'R' %}selected{% endif %}>Recebimento</option>
+            </select>
+        </div>
+
+        <div class="col-md-6 d-flex align-items-end gap-2">
+            <button type="submit" class="btn ls-btn-primary w-100">
+                <i class="fas fa-search"></i> Filtrar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="ls-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" style="border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+            <thead style="border-bottom: 1px solid rgba(148, 163, 184, 0.25);">
+                <tr>
+                    <th>Documento</th>
+                    <th>Entidade</th>
+                    <th>Data Evento</th>
+                    <th>Data Vencimento</th>
+                    <th>Conta Fluxo</th>
+                    <th class="text-end">Valor</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lancamento in lancamentos %}
+                <tr>
+                    <td><code style="color: #93c5fd;">{{ lancamento.numero_documento }}</code></td>
+                    <td>{{ lancamento.entidade.nome }}</td>
+                    <td>{{ lancamento.data_evento.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ lancamento.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ lancamento.fluxo_conta.codigo }}</td>
+                    <td class="text-end fw-bold" style="color: #22c55e;">R$ {{ lancamento.valor_real|brl }}</td>
+                    <td>
+                        {% if lancamento.status == 'pago' %}
+                            <span class="badge bg-success">Pago</span>
+                        {% elif lancamento.status == 'vencido' %}
+                            <span class="badge bg-danger">Vencido</span>
+                        {% else %}
+                            <span class="badge bg-warning">Aberto</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ url_for('lancamentos.editar', id=lancamento.id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if lancamento.status != 'pago' %}
+                            <form method="POST" action="{{ url_for('lancamentos.pagar', id=lancamento.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-outline-success btn-sm" title="Marcar como pago">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('lancamentos.deletar', id=lancamento.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Tem certeza?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        Nenhum lançamento encontrado
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('lancamentos.index', page=pagination.prev_num, status=status, tipo=tipo) }}">Anterior</a>
+        </li>
+        {% endif %}
+
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('lancamentos.index', page=page_num, status=status, tipo=tipo) }}">{{ page_num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('lancamentos.index', page=pagination.next_num, status=status, tipo=tipo) }}">Próximo</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<style>
+    table tbody tr:hover {
+        background-color: rgba(37, 99, 235, 0.1) !important;
+    }
+
+    table tbody td {
+        padding: 12px 8px;
+        border-color: rgba(148, 163, 184, 0.15) !important;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
