@@ -152,9 +152,11 @@ def _ensure_user_settings_columns():
         logger.info('Default admin user created: admin/admin123')
 
 
+
+# Exporta o app para o Gunicorn
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
-    
     # Run application
     host = os.getenv('SERVER_HOST', '0.0.0.0')
     port = int(os.getenv('SERVER_PORT', 5000))
