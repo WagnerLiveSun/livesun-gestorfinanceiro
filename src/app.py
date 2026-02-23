@@ -122,6 +122,14 @@ def create_app(config_name=None):
 
 def _create_default_user():
     """Create default admin user if not exists"""
+    from src.models import Empresa
+    # Cria empresa padrão se não existir
+    empresa = Empresa.query.filter_by(nome='Empresa Padrão').first()
+    if not empresa:
+        empresa = Empresa(nome='Empresa Padrão', cnpj=None)
+        db.session.add(empresa)
+        db.session.commit()
+
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
         admin_user = User(
@@ -129,7 +137,8 @@ def _create_default_user():
             email='admin@livesun.local',
             full_name='Administrador',
             is_admin=True,
-            is_active=True
+            is_active=True,
+            empresa_id=empresa.id
         )
         admin_user.set_password('admin123')
         db.session.add(admin_user)
@@ -162,10 +171,10 @@ if __name__ == '__main__':
     port = int(os.getenv('SERVER_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'True') == 'True'
     
-    print(f'\n{"="*60}')
-    print(f'  LiveSun Financeiro - Sistema de Gestão Financeira')
-    print(f'  Servidor rodando em: http://localhost:{port}')
-    print(f'  Login padrão: admin / admin123')
-    print(f'{"="*60}\n')
+    print(f'\n{"="*60} - app.py:174')
+    print(f'LiveSun Financeiro  Sistema de Gestão Financeira - app.py:175')
+    print(f'Servidor rodando em: http://localhost:{port} - app.py:176')
+    print(f'Login padrão: admin / admin123 - app.py:177')
+    print(f'{"="*60}\n - app.py:178')
     
     app.run(host=host, port=port, debug=debug)
