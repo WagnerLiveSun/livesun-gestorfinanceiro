@@ -1,3 +1,9 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from src.models import db, User, Empresa
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
 @auth_bp.route('/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
