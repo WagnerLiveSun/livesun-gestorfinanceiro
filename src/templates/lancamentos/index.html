@@ -60,10 +60,10 @@
                 {% for lancamento in lancamentos %}
                 <tr>
                     <td><code style="color: #93c5fd;">{{ lancamento.numero_documento }}</code></td>
-                    <td>{{ lancamento.entidade.nome }}</td>
-                    <td>{{ lancamento.data_evento.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ lancamento.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ lancamento.fluxo_conta.codigo }}</td>
+                    <td>{{ lancamento.entidade.nome if lancamento.entidade else 'N/A' }}</td>
+                    <td>{{ lancamento.data_evento.strftime('%d/%m/%Y') if lancamento.data_evento else 'N/A' }}</td>
+                    <td>{{ lancamento.data_vencimento.strftime('%d/%m/%Y') if lancamento.data_vencimento else 'N/A' }}</td>
+                    <td>{{ lancamento.fluxo_conta.codigo if lancamento.fluxo_conta else 'N/A' }}</td>
                     <td class="text-end fw-bold" style="color: #22c55e;">R$ {{ lancamento.valor_real|brl }}</td>
                     <td>
                         {% if lancamento.status == 'pago' %}

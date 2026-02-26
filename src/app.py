@@ -17,7 +17,15 @@ from config.config import config
 from src.models import db, User, Entidade, FluxoContaModel, ContaBanco, Lancamento
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('app_errors.log', encoding='utf-8')
+    ]
+)
 logger = logging.getLogger(__name__)
 
 def create_app(config_name=None):
@@ -61,6 +69,10 @@ def create_app(config_name=None):
     app.register_blueprint(lancamentos_bp)
     app.register_blueprint(relatorios_bp)
 
+    @app.route('/suporte')
+    def suporte():
+        return render_template('suporte.html')
+
     @app.template_filter('brl')
     def format_brl(value):
         """Format numeric values using pt-BR currency style."""
@@ -100,8 +112,11 @@ def create_app(config_name=None):
     
     @app.errorhandler(500)
     def internal_error(error):
+        import traceback
+        logger.error('Erro interno no servidor: %s\n%s', error, traceback.format_exc())
         db.session.rollback()
-        return render_template('errors/500.html'), 500
+        mensagem = "Ocorreu um erro inesperado. Nossa equipe já foi notificada. Tente novamente ou entre em contato com o suporte."
+        return render_template('errors/500.html', mensagem=mensagem), 500
     
     # Shell context for flask shell
     @app.shell_context_processor
@@ -157,7 +172,8 @@ def _ensure_user_settings_columns():
                 )
             logger.info('Added dashboard_chart_days column to users table')
     except Exception as exc:
-        logger.warning('Could not verify/update users table schema: %s', exc)
+        import traceback
+        logger.error('Erro ao verificar/atualizar schema da tabela users: %s\n%s', exc, traceback.format_exc())
         logger.info('Default admin user created: admin/admin123')
 
 
@@ -171,10 +187,10 @@ if __name__ == '__main__':
     port = int(os.getenv('SERVER_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'True') == 'True'
     
-    print(f'\n{"="*60} - app.py:174')
-    print(f'LiveSun Financeiro  Sistema de Gestão Financeira - app.py:175')
-    print(f'Servidor rodando em: http://localhost:{port} - app.py:176')
-    print(f'Login padrão: admin / admin123 - app.py:177')
-    print(f'{"="*60}\n - app.py:178')
+    print(f'\n{"="*60} - app.py:190')
+    print(f'LiveSun Financeiro  Sistema de Gestão Financeira - app.py:191')
+    print(f'Servidor rodando em: http://localhost:{port} - app.py:192')
+    print(f'Login padrão: admin / admin123 - app.py:193')
+    print(f'{"="*60}\n - app.py:194')
     
     app.run(host=host, port=port, debug=debug)

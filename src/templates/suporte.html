@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block title %}Suporte{% endblock %}
+{% block content %}
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Suporte ao Usuário</h4>
+        </div>
+        <div class="card-body">
+            <p>Em caso de erro ou dúvida, entre em contato:</p>
+            <ul class="list-group mb-3">
+                <li class="list-group-item">
+                    <i class="fas fa-envelope"></i> Email: <a href="mailto:suporte@livesun.com.br">suporte@livesun.com.br</a>
+                </li>
+                <li class="list-group-item">
+                    <i class="fab fa-whatsapp"></i> WhatsApp: <a href="https://wa.me/5521927891083" target="_blank">21 92789-1083</a>
+                </li>
+            </ul>
+            <a class="btn btn-success w-100 mb-2" href="https://app.pipefy.com/public/form/ETeM9Gbz" target="_blank">
+                <i class="fas fa-comment-dots"></i> Abrir solicitação de suporte (Pipefy)
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -100,19 +100,19 @@
                             {% set linha_atual = loop.index %}
                             <tr>
                                 <td>{{ l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-' }}</td>
-                                <td>{{ l.fluxo_conta.codigo }}</td>
-                                <td>{{ l.conta_banco.nome }}</td>
+                                <td>{{ l.fluxo_conta.codigo if l.fluxo_conta else 'N/A' }}</td>
+                                <td>{{ l.conta_banco.nome if l.conta_banco else 'N/A' }}</td>
                                 <td class="text-end">R$ {{ item.saldo_anterior|brl }}</td>
                                 <td class="text-end" style="color: #ef4444;">
-                                    {% if l.fluxo_conta.tipo == 'P' %}
+                                    {% if l.fluxo_conta and l.fluxo_conta.tipo == 'P' %}
                                         -R$ {{ l.valor_pago|brl }}
                                     {% else %}
                                         -
                                     {% endif %}
                                 </td>
                                 <td class="text-end" style="color: #22c55e;">
-                                    {% if l.fluxo_conta.tipo == 'R' %}
-                                        +R$ {{ l.valor_pago|brl }}
+                                    {% if l.fluxo_conta and l.fluxo_conta.tipo == 'R' %}
+                                        R$ {{ l.valor_pago|brl }}
                                     {% else %}
                                         -
                                     {% endif %}
@@ -154,19 +154,19 @@
                         {% set l = item.lancamento %}
                         <tr>
                             <td>{{ l.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ l.fluxo_conta.codigo }}</td>
-                            <td>{{ l.conta_banco.nome }}</td>
+                            <td>{{ l.fluxo_conta.codigo if l.fluxo_conta else 'N/A' }}</td>
+                            <td>{{ l.conta_banco.nome if l.conta_banco else 'N/A' }}</td>
                             <td class="text-end">R$ {{ item.saldo_anterior|brl }}</td>
                             <td class="text-end" style="color: #ef4444;">
-                                {% if l.fluxo_conta.tipo == 'P' %}
+                                {% if l.fluxo_conta and l.fluxo_conta.tipo == 'P' %}
                                     -R$ {{ l.valor_real|brl }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
                             <td class="text-end" style="color: #22c55e;">
-                                {% if l.fluxo_conta.tipo == 'R' %}
-                                    +R$ {{ l.valor_real|brl }}
+                                {% if l.fluxo_conta and l.fluxo_conta.tipo == 'R' %}
+                                    R$ {{ l.valor_real|brl }}
                                 {% else %}
                                     -
                                 {% endif %}

@@ -48,7 +48,9 @@ def criar():
             return redirect(url_for('contas_banco.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao criar conta bancária: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao criar conta bancária: {str(e)}', 'danger')
     
     return render_template(
@@ -83,7 +85,9 @@ def editar(id):
             return redirect(url_for('contas_banco.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao atualizar conta bancária: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar conta bancária: {str(e)}', 'danger')
     
     return render_template(
@@ -119,7 +123,9 @@ def deletar(id):
         db.session.commit()
         flash(f'Conta bancária {conta.nome} desativada com sucesso', 'success')
     except Exception as e:
+        import logging, traceback
         db.session.rollback()
+        logging.error('Erro ao deletar conta bancária: %s\n%s', e, traceback.format_exc())
         flash(f'Erro ao deletar conta bancária: {str(e)}', 'danger')
     
     return redirect(url_for('contas_banco.index'))

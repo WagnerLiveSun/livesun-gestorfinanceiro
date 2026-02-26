@@ -1,15 +1,91 @@
+
 import io
 from collections import defaultdict
-from flask import Blueprint, render_template, request, jsonify, send_file
-from flask_login import login_required
+from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
+from flask_login import login_required, current_user
 from src.models import db, Lancamento, Entidade, ContaBanco, FluxoContaModel
 from sqlalchemy import func
 from datetime import datetime, date
 from decimal import Decimal
 from types import SimpleNamespace
-from openpyxl import Workbook
+import logging
+try:
+	from openpyxl import Workbook
+except Exception:
+	Workbook = None
+	logging.getLogger(__name__).warning("openpyxl not available; Excel exports disabled", exc_info=True)
 
 relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
+
+# Relatório de Fluxo de Caixa CSV
+@relatorios_bp.route('/fluxo-caixa-csv')
+@login_required
+def fluxo_caixa_csv():
+	data_inicio = request.args.get('data_inicio', '')
+	data_fim = request.args.get('data_fim', '')
+	# Filtros básicos
+	query = Lancamento.query
+	if data_inicio:
+		data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+		query = query.filter(Lancamento.data_pagamento >= data_inicio_dt)
+	if data_fim:
+		data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d').date()
+		query = query.filter(Lancamento.data_pagamento <= data_fim_dt)
+	# Apenas lançamentos da empresa do usuário
+	if hasattr(current_user, 'empresa_id'):
+		query = query.filter(Lancamento.empresa_id == current_user.empresa_id)
+	lancamentos = query.order_by(Lancamento.data_pagamento.asc()).all()
+	dados_csv = []
+	for l in lancamentos:
+		dados_csv.append({
+			'data': l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-',
+			'descricao': l.descricao or '-',
+			'categoria': l.fluxo_conta.nome if l.fluxo_conta else '-',
+			'conta_banco': l.conta_banco.nome if l.conta_banco else '-',
+			'tipo': 'Receita' if l.fluxo_conta and l.fluxo_conta.tipo == 'R' else 'Despesa',
+			'valor': l.valor_real or l.valor_pago or 0
+		})
+	return render_template('relatorios/fluxo_caixa_csv.html', dados_csv=dados_csv, data_inicio=data_inicio, data_fim=data_fim)
+
+# Exportação para Excel do Fluxo de Caixa CSV
+@relatorios_bp.route('/fluxo-caixa-csv/export')
+@login_required
+def export_fluxo_caixa_csv():
+	data_inicio = request.args.get('data_inicio', '')
+	data_fim = request.args.get('data_fim', '')
+	# Se openpyxl não estiver disponível, retornar mensagem amigável
+	if Workbook is None:
+		flash('Exportação para Excel indisponível: biblioteca "openpyxl" não está instalada no ambiente.', 'warning')
+		return redirect(url_for('relatorios.fluxo_caixa'))
+	query = Lancamento.query
+	if data_inicio:
+		data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+		query = query.filter(Lancamento.data_pagamento >= data_inicio_dt)
+	if data_fim:
+		data_fim_dt = datetime.strptime(data_fim, '%Y-%m-%d').date()
+		query = query.filter(Lancamento.data_pagamento <= data_fim_dt)
+	if hasattr(current_user, 'empresa_id'):
+		query = query.filter(Lancamento.empresa_id == current_user.empresa_id)
+	lancamentos = query.order_by(Lancamento.data_pagamento.asc()).all()
+	wb = Workbook()
+	ws = wb.active
+	ws.title = 'Fluxo de Caixa'
+	ws.append(['Data', 'Descrição', 'Categoria', 'Conta Banco', 'Tipo', 'Valor (R$)'])
+	for l in lancamentos:
+		valor = l.valor_real or l.valor_pago or 0
+		valor_brl = f'R$ {valor:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+		ws.append([
+			l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-',
+			l.descricao or '-',
+			l.fluxo_conta.nome if l.fluxo_conta else '-',
+			l.conta_banco.nome if l.conta_banco else '-',
+			'Receita' if l.fluxo_conta and l.fluxo_conta.tipo == 'R' else 'Despesa',
+			valor_brl
+		])
+	output = io.BytesIO()
+	wb.save(output)
+	output.seek(0)
+	return send_file(output, as_attachment=True, download_name='fluxo_caixa.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @relatorios_bp.route('/fluxo-caixa-previsto')
 @login_required
@@ -48,7 +124,7 @@ def fluxo_caixa():
 			saldo_anterior = saldo_atual_por_conta.get(conta_id, Decimal('0.00'))
 			valor_base = lancamento.valor_real if use_valor_real else lancamento.valor_pago
 			valor = Decimal(str(valor_base or 0))
-			if lancamento.fluxo_conta.tipo == 'P':
+			if lancamento.fluxo_conta and lancamento.fluxo_conta.tipo == 'P':
 				saldo_atual = saldo_anterior - valor
 			else:
 				saldo_atual = saldo_anterior + valor
@@ -68,7 +144,7 @@ def fluxo_caixa():
 				continue
 			valor_base = lancamento.valor_real if use_valor_real else lancamento.valor_pago
 			valor = Decimal(str(valor_base or 0))
-			if lancamento.fluxo_conta.tipo == 'P':
+			if lancamento.fluxo_conta and lancamento.fluxo_conta.tipo == 'P':
 				totals[data_ref]['pagar'] += valor
 			else:
 				totals[data_ref]['receber'] += valor
@@ -157,6 +233,10 @@ def export_fluxo_caixa():
 	data_fim = request.args.get('data_fim', '')
 	conta_banco_id = request.args.get('conta_banco_id', '', type=int)
 	conta_fluxo_id = request.args.get('conta_fluxo_id', '', type=int)
+	# Se openpyxl não estiver disponível, retornar mensagem amigável
+	if Workbook is None:
+		flash('Exportação para Excel indisponível: biblioteca "openpyxl" não está instalada no ambiente.', 'warning')
+		return redirect(url_for('relatorios.fluxo_caixa'))
 
 	def get_saldo_inicial_por_conta():
 		if conta_banco_id:
@@ -176,7 +256,7 @@ def export_fluxo_caixa():
 				continue
 			valor_base = lancamento.valor_real if use_valor_real else lancamento.valor_pago
 			valor = Decimal(str(valor_base or 0))
-			if lancamento.fluxo_conta.tipo == 'P':
+			if lancamento.fluxo_conta and lancamento.fluxo_conta.tipo == 'P':
 				totals[data_ref]['pagar'] += valor
 			else:
 				totals[data_ref]['receber'] += valor

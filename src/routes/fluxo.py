@@ -51,7 +51,9 @@ def criar():
             return redirect(url_for('fluxo.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao criar conta: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao criar conta: {str(e)}', 'danger')
     
     return render_template('fluxo/form.html', action='criar')
@@ -79,7 +81,9 @@ def editar(id):
             return redirect(url_for('fluxo.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao atualizar conta: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar conta: {str(e)}', 'danger')
     
     return render_template('fluxo/form.html', action='editar', conta=conta)
@@ -96,7 +100,9 @@ def deletar(id):
         db.session.commit()
         flash(f'Conta {conta.codigo} desativada com sucesso', 'success')
     except Exception as e:
+        import logging, traceback
         db.session.rollback()
+        logging.error('Erro ao deletar conta: %s\n%s', e, traceback.format_exc())
         flash(f'Erro ao deletar conta: {str(e)}', 'danger')
     
     return redirect(url_for('fluxo.index'))

@@ -73,7 +73,9 @@ def criar():
             return redirect(url_for('lancamentos.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao criar lançamento: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao criar lançamento: {str(e)}', 'danger')
     
     return render_template(
@@ -122,7 +124,9 @@ def editar(id):
             return redirect(url_for('lancamentos.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao atualizar lançamento: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar lançamento: {str(e)}', 'danger')
     
     return render_template(
@@ -151,7 +155,9 @@ def pagar(id):
         
         flash(f'Lançamento {lancamento.numero_documento} marcado como pago', 'success')
     except Exception as e:
+        import logging, traceback
         db.session.rollback()
+        logging.error('Erro ao pagar lançamento: %s\n%s', e, traceback.format_exc())
         flash(f'Erro ao pagar lançamento: {str(e)}', 'danger')
     
     return redirect(url_for('lancamentos.index'))
@@ -166,9 +172,14 @@ def deletar(id):
     try:
         db.session.delete(lancamento)
         db.session.commit()
+        # Recalcula o consolidado para remover reflexos do lançamento excluído
+        from src.services.fluxo_consolidado import consolidar_fluxo_caixa
+        consolidar_fluxo_caixa()
         flash(f'Lançamento deletado com sucesso', 'success')
     except Exception as e:
+        import logging, traceback
         db.session.rollback()
+        logging.error('Erro ao deletar lançamento: %s\n%s', e, traceback.format_exc())
         flash(f'Erro ao deletar lançamento: {str(e)}', 'danger')
     
     return redirect(url_for('lancamentos.index'))

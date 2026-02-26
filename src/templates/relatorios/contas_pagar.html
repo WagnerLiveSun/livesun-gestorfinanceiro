@@ -98,9 +98,9 @@
                     <td>{{ l.data_evento.strftime('%d/%m/%Y') }}</td>
                     <td>{{ l.data_vencimento.strftime('%d/%m/%Y') }}</td>
                     <td>{{ l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-' }}</td>
-                    <td>{{ l.entidade.nome }}</td>
-                    <td>{{ l.conta_banco.nome }}</td>
-                    <td>{{ l.fluxo_conta.codigo }}</td>
+                    <td>{{ l.entidade.nome if l.entidade else 'N/A' }}</td>
+                    <td>{{ l.conta_banco.nome if l.conta_banco else 'N/A' }}</td>
+                    <td>{{ l.fluxo_conta.codigo if l.fluxo_conta else 'N/A' }}</td>
                     <td class="text-end">R$ {{ l.valor_real|brl }}</td>
                     <td class="text-end">R$ {{ l.valor_pago|brl }}</td>
                     <td>

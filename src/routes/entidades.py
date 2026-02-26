@@ -70,7 +70,9 @@ def criar():
             return redirect(url_for('entidades.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao criar entidade: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao criar entidade: {str(e)}', 'danger')
     
     return render_template('entidades/form.html', action='criar')
@@ -107,7 +109,9 @@ def editar(id):
             return redirect(url_for('entidades.index'))
         
         except Exception as e:
+            import logging, traceback
             db.session.rollback()
+            logging.error('Erro ao atualizar entidade: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar entidade: {str(e)}', 'danger')
     
     return render_template('entidades/form.html', action='editar', entidade=entidade)
@@ -139,7 +143,9 @@ def deletar(id):
         db.session.commit()
         flash(f'Entidade {entidade.nome} desativada com sucesso', 'success')
     except Exception as e:
+        import logging, traceback
         db.session.rollback()
+        logging.error('Erro ao deletar entidade: %s\n%s', e, traceback.format_exc())
         flash(f'Erro ao deletar entidade: {str(e)}', 'danger')
     
     return redirect(url_for('entidades.index'))

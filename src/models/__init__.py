@@ -106,7 +106,7 @@ class FluxoContaModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
     empresa = db.relationship('Empresa', backref='fluxo_contas')
-    codigo = db.Column(db.String(20), unique=True, nullable=False, index=True)  # 999 ou 9.99 format
+    codigo = db.Column(db.String(20), nullable=False, index=True)  # 999 ou 9.99 format
     descricao = db.Column(db.String(200), nullable=False)
     tipo = db.Column(db.String(1), nullable=False)  # P-Pagamento, R-Recebimento
     mascara = db.Column(db.String(50))  # 999 ou 9.99

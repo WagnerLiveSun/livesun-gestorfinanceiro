@@ -135,7 +135,7 @@
                     <tr>
                         <td>{{ lancamento.data_evento.strftime('%d/%m/%Y') }}</td>
                         <td>{{ lancamento.numero_documento or 'N/A' }}</td>
-                        <td>{{ lancamento.fluxo_conta.codigo }}</td>
+                        <td>{{ lancamento.fluxo_conta.codigo if lancamento.fluxo_conta else 'N/A' }}</td>
                         <td class="text-end">R$ {{ lancamento.valor_real|brl }}</td>
                         <td>
                             {% if lancamento.status == 'pago' %}
