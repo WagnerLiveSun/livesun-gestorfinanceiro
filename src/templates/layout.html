@@ -269,8 +269,9 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="userDropdown">
                                 {% if current_user.is_admin %}
-                                    <li><a class="dropdown-item" href="{{ url_for('auth.perfil') }}">Perfil</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('auth.add_user') }}">Adicionar Usuário</a></li>
+                                    <li><a class="dropdown-item" href="{{ safe_url_for('auth.perfil') or '#' }}">Perfil</a></li>
+                                    {% set add_user_url = safe_url_for('auth.add_user') %}
+                                    <li><a class="dropdown-item" href="{{ add_user_url or '#' }}">Adicionar Usuário</a></li>
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sair</a></li>
@@ -295,8 +296,9 @@
                         </a>
                     </li>
                     {% if current_user.is_admin %}
+                    {% set add_user_url = safe_url_for('auth.add_user') %}
                     <li>
-                        <a class="ls-sidebar-link {% if request.endpoint == 'auth.add_user' %}active{% endif %}" href="{{ url_for('auth.add_user') }}">
+                        <a class="ls-sidebar-link {% if request.endpoint == 'auth.add_user' %}active{% endif %}" href="{{ add_user_url or '#' }}">
                             <i class="fas fa-user-plus"></i> Adicionar Usuário
                         </a>
                     </li>

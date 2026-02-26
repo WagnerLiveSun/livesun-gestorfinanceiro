@@ -40,6 +40,13 @@ def create_app(config_name=None):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
     # Initialize extensions
+    # Add SQLAlchemy engine options to improve resilience against dropped MySQL connections
+    app.config.setdefault('SQLALCHEMY_ENGINE_OPTIONS', {})
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'].update({
+        'pool_pre_ping': True,
+        'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', '1800')),
+    })
+
     db.init_app(app)
     
     # Initialize Flask-Login
@@ -88,10 +95,21 @@ def create_app(config_name=None):
     # Register context processors
     @app.context_processor
     def inject_user():
+        from flask import url_for
+        from werkzeug.routing import BuildError
+
+        def safe_url_for(endpoint, **values):
+            try:
+                return url_for(endpoint, **values)
+            except BuildError:
+                return None
+
         return {
             'current_user': current_user,
             'year': datetime.now().year,
-            'powered_by': 'LiveSun Financeiro'
+            'current_year': datetime.now().year,
+            'powered_by': 'LiveSun Financeiro',
+            'safe_url_for': safe_url_for
         }
     
     # Create database tables

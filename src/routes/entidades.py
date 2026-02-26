@@ -78,8 +78,9 @@ def criar():
         except Exception as e:
             import logging, traceback
             db.session.rollback()
-            logging.error('Erro ao criar entidade: %s\n%s', e, traceback.format_exc())
-            flash(f'Erro ao criar entidade: {str(e)}', 'danger')
+            logging.exception('Erro ao criar entidade: %s', e)
+            flash('Erro ao criar entidade. Verifique os dados e tente novamente.', 'danger')
+            return redirect(url_for('entidades.criar'))
     
     return render_template('entidades/form.html', action='criar')
 

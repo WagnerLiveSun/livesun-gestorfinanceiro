@@ -22,7 +22,7 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Empresa (nome)</label>
-                <input type="text" class="form-control" value="{{ current_user.empresa.full_name if current_user.empresa else current_user.empresa.nome if current_user.empresa else '' }}" disabled style="background-color: rgba(30, 41, 59, 0.6); color: #cbd5e1;">
+                <input type="text" class="form-control" value="{{ current_user.empresa.nome if current_user.empresa else '' }}" disabled style="background-color: rgba(30, 41, 59, 0.6); color: #cbd5e1;">
             </div>
             <input type="hidden" name="empresa_id" value="{{ current_user.empresa_id }}">
         </div>
