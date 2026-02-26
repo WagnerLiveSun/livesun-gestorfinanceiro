@@ -44,7 +44,13 @@ def criar():
     """Create new entity"""
     if request.method == 'POST':
         try:
+            # Ensure the new entity is associated with the current user's company
+            if not getattr(current_user, 'empresa_id', None):
+                flash('Usuário não está associado a uma empresa.', 'danger')
+                return render_template('entidades/form.html', action='criar')
+
             entidade = Entidade(
+                empresa_id=current_user.empresa_id,
                 tipo=request.form.get('tipo'),
                 cnpj_cpf=request.form.get('cnpj_cpf'),
                 inscricao_estadual=request.form.get('inscricao_estadual'),
