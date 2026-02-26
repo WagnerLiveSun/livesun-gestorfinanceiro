@@ -14,6 +14,18 @@
 
 <div class="ls-card p-4">
     <form method="POST">
+        <!-- Empresa (informativo) -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label class="form-label">Empresa (código)</label>
+                <input type="text" class="form-control" value="{{ current_user.empresa_id }}" disabled style="background-color: rgba(30, 41, 59, 0.6); color: #cbd5e1;">
+            </div>
+            <div class="col-md-9">
+                <label class="form-label">Empresa (nome)</label>
+                <input type="text" class="form-control" value="{{ current_user.empresa.nome if current_user.empresa else '' }}" disabled style="background-color: rgba(30, 41, 59, 0.6); color: #cbd5e1;">
+            </div>
+            <input type="hidden" name="empresa_id" value="{{ current_user.empresa_id }}">
+        </div>
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label class="form-label">Data do Evento *</label>

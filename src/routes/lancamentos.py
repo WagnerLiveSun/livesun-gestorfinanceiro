@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from src.models import db, Lancamento, Entidade, FluxoContaModel, ContaBanco
 from datetime import datetime, date
 from src.services.fluxo_consolidado import consolidar_fluxo_caixa
@@ -46,6 +46,7 @@ def criar():
     if request.method == 'POST':
         try:
             lancamento = Lancamento(
+                empresa_id=current_user.empresa_id,
                 data_evento=datetime.strptime(request.form.get('data_evento'), '%Y-%m-%d').date(),
                 data_vencimento=datetime.strptime(request.form.get('data_vencimento'), '%Y-%m-%d').date(),
                 data_pagamento=None,
