@@ -37,10 +37,13 @@ def fluxo_caixa_csv():
 	lancamentos = query.order_by(Lancamento.data_pagamento.asc()).all()
 	dados_csv = []
 	for l in lancamentos:
+		desc = getattr(l, 'descricao', None)
+		if not desc:
+			desc = l.observacoes or l.numero_documento or '-'
 		dados_csv.append({
 			'data': l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-',
-			'descricao': l.descricao or '-',
-			'categoria': l.fluxo_conta.nome if l.fluxo_conta else '-',
+			'descricao': desc,
+			'categoria': l.fluxo_conta.descricao if l.fluxo_conta else '-',
 			'conta_banco': l.conta_banco.nome if l.conta_banco else '-',
 			'tipo': 'Receita' if l.fluxo_conta and l.fluxo_conta.tipo == 'R' else 'Despesa',
 			'valor': l.valor_real or l.valor_pago or 0
@@ -76,8 +79,8 @@ def export_fluxo_caixa_csv():
 		valor_brl = f'R$ {valor:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
 		ws.append([
 			l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-',
-			l.descricao or '-',
-			l.fluxo_conta.nome if l.fluxo_conta else '-',
+			(getattr(l, 'descricao', None) or l.observacoes or l.numero_documento or '-'),
+			l.fluxo_conta.descricao if l.fluxo_conta else '-',
 			l.conta_banco.nome if l.conta_banco else '-',
 			'Receita' if l.fluxo_conta and l.fluxo_conta.tipo == 'R' else 'Despesa',
 			valor_brl
