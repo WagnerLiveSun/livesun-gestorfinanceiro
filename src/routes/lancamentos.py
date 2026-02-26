@@ -68,7 +68,7 @@ def criar():
             
             db.session.add(lancamento)
             db.session.commit()
-            consolidar_fluxo_caixa()
+            consolidar_fluxo_caixa(current_user.empresa_id)
             
             flash(f'Lançamento {lancamento.numero_documento} criado com sucesso', 'success')
             return redirect(url_for('lancamentos.index'))
@@ -119,7 +119,7 @@ def editar(id):
                 lancamento.status = 'aberto'
             
             db.session.commit()
-            consolidar_fluxo_caixa()
+            consolidar_fluxo_caixa(current_user.empresa_id)
             
             flash(f'Lançamento {lancamento.numero_documento} atualizado com sucesso', 'success')
             return redirect(url_for('lancamentos.index'))
@@ -152,7 +152,7 @@ def pagar(id):
         lancamento.status = 'pago'
         
         db.session.commit()
-        consolidar_fluxo_caixa()
+        consolidar_fluxo_caixa(current_user.empresa_id)
         
         flash(f'Lançamento {lancamento.numero_documento} marcado como pago', 'success')
     except Exception as e:
@@ -175,7 +175,7 @@ def deletar(id):
         db.session.commit()
         # Recalcula o consolidado para remover reflexos do lançamento excluído
         from src.services.fluxo_consolidado import consolidar_fluxo_caixa
-        consolidar_fluxo_caixa()
+        consolidar_fluxo_caixa(current_user.empresa_id)
         flash(f'Lançamento deletado com sucesso', 'success')
     except Exception as e:
         import logging, traceback

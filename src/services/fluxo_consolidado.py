@@ -4,15 +4,18 @@ from src.models import db, Lancamento, FluxoContaModel, ContaBanco, FluxoCaixaRe
 from datetime import datetime
 
 
-def consolidar_fluxo_caixa():
+def consolidar_fluxo_caixa(empresa_id=None):
     """Consolidate cash flow per company.
 
-    This function now operates per `empresa_id` to avoid deleting or mixing
-    consolidated rows between different tenants. It also sets `empresa_id`
-    on created consolidated rows.
+    If `empresa_id` is provided, only that company's consolidated rows are
+    recalculated. Otherwise the function iterates all companies present in
+    `Lancamento`.
     """
-    # Determine companies with lancamentos
-    empresa_ids = [row[0] for row in db.session.query(Lancamento.empresa_id).distinct().all()]
+    # Determine companies to process
+    if empresa_id:
+        empresa_ids = [empresa_id]
+    else:
+        empresa_ids = [row[0] for row in db.session.query(Lancamento.empresa_id).distinct().all()]
 
     if not empresa_ids:
         return
