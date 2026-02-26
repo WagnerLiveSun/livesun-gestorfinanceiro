@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
+from flask_login import current_user
 from src.models import db, ContaBanco, FluxoContaModel
 
 contas_banco_bp = Blueprint('contas_banco', __name__, url_prefix='/contas-banco')
@@ -29,7 +30,13 @@ def criar():
     
     if request.method == 'POST':
         try:
+            # Ensure current user has an associated company
+            if not getattr(current_user, 'empresa_id', None):
+                flash('Usuário não está associado a uma empresa.', 'danger')
+                return redirect(url_for('contas_banco.criar'))
+
             conta = ContaBanco(
+                empresa_id=current_user.empresa_id,
                 nome=request.form.get('nome'),
                 banco=request.form.get('banco'),
                 agencia=request.form.get('agencia'),
@@ -50,8 +57,9 @@ def criar():
         except Exception as e:
             import logging, traceback
             db.session.rollback()
-            logging.error('Erro ao criar conta bancária: %s\n%s', e, traceback.format_exc())
-            flash(f'Erro ao criar conta bancária: {str(e)}', 'danger')
+            logging.exception('Erro ao criar conta bancária: %s', e)
+            flash('Erro ao criar conta bancária. Verifique os dados e tente novamente.', 'danger')
+            return redirect(url_for('contas_banco.criar'))
     
     return render_template(
         'contas_banco/form.html',
