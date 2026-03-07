@@ -32,5 +32,5 @@ ENV FLASK_APP=src/app.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
-# Run migrations and start the app
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "src.app:create_app()", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+# Start app binding to Railway dynamic port (fallback to 5000 for local runs)
+CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} 'src.app:create_app()' --timeout 120 --access-logfile - --error-logfile -"]
