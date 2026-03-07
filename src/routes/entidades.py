@@ -42,12 +42,25 @@ def index():
 @login_required
 def criar():
     """Create new entity"""
+    # Obter vendedores primeiro (evita duplicação de código)
+    vendedores = []
+    try:
+        if hasattr(current_user, 'empresa_id') and current_user.empresa_id:
+            vendedores = Entidade.query.filter_by(
+                empresa_id=current_user.empresa_id,
+                tipo='V',
+                ativo=True
+            ).order_by(Entidade.nome).all()
+    except Exception as e:
+        import logging
+        logging.warning('Erro ao buscar vendedores: %s', e)
+    
     if request.method == 'POST':
         try:
             # Ensure the new entity is associated with the current user's company
             if not getattr(current_user, 'empresa_id', None):
                 flash('Usuário não está associado a uma empresa.', 'danger')
-                return render_template('entidades/form.html', action='criar')
+                return render_template('entidades/form.html', action='criar', vendedores=vendedores)
 
             entidade = Entidade(
                 empresa_id=current_user.empresa_id,
@@ -84,17 +97,7 @@ def criar():
             db.session.rollback()
             logging.exception('Erro ao criar entidade: %s', e)
             flash('Erro ao criar entidade. Verifique os dados e tente novamente.', 'danger')
-            return redirect(url_for('entidades.criar'))
-    
-    # Obter vendedores para o formulário (pode estar vazio em setup inicial)
-    try:
-        vendedores = Entidade.query.filter_by(
-            empresa_id=current_user.empresa_id,
-            tipo='V',
-            ativo=True
-        ).order_by(Entidade.nome).all()
-    except Exception:
-        vendedores = []
+            return render_template('entidades/form.html', action='criar', vendedores=vendedores)
     
     return render_template('entidades/form.html', action='criar', vendedores=vendedores)
 
