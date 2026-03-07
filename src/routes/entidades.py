@@ -66,7 +66,11 @@ def criar():
                 telefone=request.form.get('telefone'),
                 email=request.form.get('email'),
                 contrato_produto=request.form.get('contrato_produto'),
-                ativo=request.form.get('ativo') == 'on'
+                ativo=request.form.get('ativo') == 'on',
+                # Campos de comissão (CLIENTE)
+                aliquota_comissao_especifica=request.form.get('aliquota_comissao_especifica') or None,
+                percentual_repasse=request.form.get('percentual_repasse') or 0,
+                entidade_vendedor_padrao_id=request.form.get('entidade_vendedor_padrao_id') or None
             )
             
             db.session.add(entidade)
@@ -82,7 +86,14 @@ def criar():
             flash('Erro ao criar entidade. Verifique os dados e tente novamente.', 'danger')
             return redirect(url_for('entidades.criar'))
     
-    return render_template('entidades/form.html', action='criar')
+    # Obter vendedores para o formulário
+    vendedores = Entidade.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        tipo='V',
+        ativo=True
+    ).order_by(Entidade.nome).all()
+    
+    return render_template('entidades/form.html', action='criar', vendedores=vendedores)
 
 
 @entidades_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
@@ -110,6 +121,13 @@ def editar(id):
             entidade.contrato_produto = request.form.get('contrato_produto')
             entidade.ativo = request.form.get('ativo') == 'on'
             
+            # Campos de comissão (CLIENTE)
+            aliquota = request.form.get('aliquota_comissao_especifica')
+            entidade.aliquota_comissao_especifica = aliquota if aliquota else None
+            entidade.percentual_repasse = request.form.get('percentual_repasse') or 0
+            vendedor_id = request.form.get('entidade_vendedor_padrao_id')
+            entidade.entidade_vendedor_padrao_id = vendedor_id if vendedor_id else None
+            
             db.session.commit()
             
             flash(f'Entidade {entidade.nome} atualizada com sucesso', 'success')
@@ -121,7 +139,14 @@ def editar(id):
             logging.error('Erro ao atualizar entidade: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar entidade: {str(e)}', 'danger')
     
-    return render_template('entidades/form.html', action='editar', entidade=entidade)
+    # Obter vendedores para o formulário
+    vendedores = Entidade.query.filter_by(
+        empresa_id=current_user.empresa_id,
+        tipo='V',
+        ativo=True
+    ).order_by(Entidade.nome).all()
+    
+    return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores)
 
 
 @entidades_bp.route('/<int:id>/ver')

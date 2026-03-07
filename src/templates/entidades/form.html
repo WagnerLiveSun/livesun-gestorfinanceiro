@@ -141,6 +141,51 @@
             </div>
         </div>
 
+        <!-- Seção de Comissão (apenas para CLIENTE) -->
+        <div id="comissao_section" style="display: {% if entidade and entidade.tipo == 'C' %}block{% else %}none{% endif %};">
+            <hr class="my-4">
+            <h5 class="mb-3">
+                <i class="fas fa-percent"></i> Configurações de Comissão
+            </h5>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Alíquota Específica de Comissão (%)</label>
+                    <input type="number" name="aliquota_comissao_especifica" class="form-control" 
+                        step="0.01" min="0" max="100"
+                        value="{{ entidade.aliquota_comissao_especifica if entidade and entidade.aliquota_comissao_especifica else '' }}" 
+                        placeholder="Deixar em branco para usar padrão"
+                        style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    <small class="form-text text-muted">Deixe em branco para usar alíquota padrão do sistema</small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Percentual de Repasse ao Fornecedor (%)</label>
+                    <input type="number" name="percentual_repasse" class="form-control" 
+                        step="0.01" min="0" max="100"
+                        value="{{ entidade.percentual_repasse if entidade else '0' }}" 
+                        style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    <small class="form-text text-muted">Percentual do valor da nota destinado ao fornecedor</small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Vendedor Padrão</label>
+                    <select name="entidade_vendedor_padrao_id" class="form-control" 
+                        style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                        <option value="">Selecione um vendedor...</option>
+                        {% if vendedores %}
+                        {% for vendedor in vendedores %}
+                        <option value="{{ vendedor.id }}" {% if entidade and entidade.entidade_vendedor_padrao_id == vendedor.id %}selected{% endif %}>
+                            {{ vendedor.nome }}
+                        </option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    <small class="form-text text-muted">Vendedor associado a este cliente para comissões</small>
+                </div>
+            </div>
+        </div>
+
         <!-- Ativo -->
         <div class="row">
             <div class="col-12 mb-4">
@@ -181,4 +226,21 @@
         border-color: #2563eb;
     }
 </style>
-{% endblock %}
+
+<script>
+    // Mostrar/ocultar seção de comissão baseado no tipo
+    document.addEventListener('DOMContentLoaded', function() {
+        const tipoSelect = document.querySelector('select[name="tipo"]');
+        const comissaoSection = document.getElementById('comissao_section');
+        
+        function toggleComissaoSection() {
+            if (tipoSelect.value === 'C') {
+                comissaoSection.style.display = 'block';
+            } else {
+                comissaoSection.style.display = 'none';
+            }
+        }
+        
+        tipoSelect.addEventListener('change', toggleComissaoSection);
+    });
+</script>

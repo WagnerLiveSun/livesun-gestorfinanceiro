@@ -1,0 +1,90 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Balancete Financeiro</h2>
+    <form method="get" class="mb-3 row g-2">
+        <div class="col-md-2">
+            <label>Data inicial:</label>
+            <input type="date" name="data_ini" value="{{ data_ini }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <label>Data final:</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <label>Conta (código inicial):</label>
+            <select name="conta_ini" class="form-control">
+                <option value="">Todas</option>
+                {% for c in contas %}
+                <option value="{{ c.codigo }}" {% if conta_ini and c.codigo == conta_ini %}selected{% endif %}>{{ c.codigo }} - {{ c.descricao }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Conta (código final):</label>
+            <select name="conta_fim" class="form-control">
+                <option value="">Todas</option>
+                {% for c in contas %}
+                <option value="{{ c.codigo }}" {% if conta_fim and c.codigo == conta_fim %}selected{% endif %}>{{ c.codigo }} - {{ c.descricao }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Entidade:</label>
+            <select name="entidade" class="form-control">
+                <option value="">Todas</option>
+                {% for e in entidades %}
+                <option value="{{ e.id }}" {% if entidade and (e.id|string == entidade|string) %}selected{% endif %}>{{ e.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Status:</label>
+            <select name="status" class="form-control">
+                <option value="">Todos</option>
+                <option value="aberto" {% if status == 'aberto' %}selected{% endif %}>Aberto</option>
+                <option value="pago" {% if status == 'pago' %}selected{% endif %}>Pago</option>
+                <option value="vencido" {% if status == 'vencido' %}selected{% endif %}>Vencido</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+        </div>
+    </form>
+    <div class="mb-3">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                Exportar
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
+                <li><a class="dropdown-item" href="{{ url_for('relatorios.export_balancete', formato='xlsx', **request.args) }}">XLSX</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('relatorios.export_balancete', formato='pdf', **request.args) }}">PDF</a></li>
+            </ul>
+        </div>
+    </div>
+    <div style="background:#fff; color:#222; padding:16px; border-radius:8px; font-size:1rem;">
+        <table class="table table-bordered table-sm" style="background:#fff; color:#222;">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Conta</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in linhas_estruturadas %}
+                <tr>
+                    <td>{{ linha.codigo }}</td>
+                    <td style="padding-left: {{ linha.nivel|int * 20 }}px">{{ linha.descricao }}</td>
+                    <td>R$ {{ '%.2f'|format(linha.valor) }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <th colspan="2">TOTAL</th>
+                    <th>R$ {{ '%.2f'|format(total) }}</th>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

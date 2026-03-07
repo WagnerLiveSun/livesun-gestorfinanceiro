@@ -14,11 +14,12 @@ if exist ".venv" (
     call venv\Scripts\activate.bat
 ) else (
     echo Criando ambiente virtual...
-    where python3.11 >nul 2>nul
+    echo Criando ambiente virtual...
+    where python3.12 >nul 2>nul
     if %errorlevel%==0 (
-        python3.11 -m venv .venv
+        python3.12 -m venv .venv
     ) else (
-        echo AVISO: python3.11 nao encontrado. Usando python padrao...
+        echo AVISO: python3.12 nao encontrado. Usando python padrao...
         python -m venv .venv
     )
     call .venv\Scripts\activate.bat

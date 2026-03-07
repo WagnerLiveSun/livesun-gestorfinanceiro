@@ -77,6 +77,11 @@ class Entidade(db.Model):
     # Contrato/Produto
     contrato_produto = db.Column(db.Text)
     
+    # Campos para comissão (aplicável apenas a CLIENTE)
+    aliquota_comissao_especifica = db.Column(db.Numeric(5, 2), nullable=True)  # Percentual específico
+    percentual_repasse = db.Column(db.Numeric(5, 2), default=0.00)  # Percentual de repasse ao fornecedor
+    entidade_vendedor_padrao_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True)  # Vendedor padrão
+    
     # Metadados
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
@@ -84,6 +89,9 @@ class Entidade(db.Model):
     
     # Relacionamentos
     lancamentos = db.relationship('Lancamento', backref='entidade', lazy='dynamic', foreign_keys='Lancamento.entidade_id')
+    comissoes = db.relationship('Comissao', backref='cliente', lazy='dynamic', foreign_keys='Comissao.entidade_cliente_id')
+    comissoes_vendedor = db.relationship('Comissao', backref='vendedor', lazy='dynamic', foreign_keys='Comissao.entidade_vendedor_id')
+    vendedor_padrao = db.relationship('Entidade', remote_side=[id], foreign_keys=[entidade_vendedor_padrao_id])
     
     def __repr__(self):
         return f'<Entidade {self.nome} ({self.tipo})>'
@@ -177,6 +185,8 @@ class Lancamento(db.Model):
     # Valores
     valor_real = db.Column(db.Numeric(15, 2), nullable=False)  # Valor original
     valor_pago = db.Column(db.Numeric(15, 2), default=0.00)  # Valor efetivamente pago
+    valor_imposto = db.Column(db.Numeric(15, 2), default=0.00)  # Imposto
+    valor_outros_custos = db.Column(db.Numeric(15, 2), default=0.00)  # Outros custos
     
     # Documentação
     numero_documento = db.Column(db.String(50), index=True)
@@ -250,3 +260,73 @@ class FluxoCaixaPrevisto(db.Model):
     
     def __repr__(self):
         return f'<FluxoCaixaPrevisto {self.data}>'
+
+
+class ParametroSistema(db.Model):
+    """System Parameters - Parâmetros de Sistema"""
+    __tablename__ = 'parametros_sistema'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
+    empresa = db.relationship('Empresa', backref='parametros_sistema')
+    
+    chave = db.Column(db.String(100), nullable=False)  # Nome do parâmetro
+    valor = db.Column(db.Text, nullable=False)  # Valor armazenado como string
+    tipo = db.Column(db.String(20), default='string')  # Tipo: string, numeric, boolean
+    descricao = db.Column(db.String(255))
+    
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('empresa_id', 'chave', name='uq_parametro_chave'),)
+    
+    def __repr__(self):
+        return f'<ParametroSistema {self.chave}={self.valor}>'
+
+
+class Comissao(db.Model):
+    """Commission Records - Registro de Comissões"""
+    __tablename__ = 'comissoes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
+    empresa = db.relationship('Empresa', backref='comissoes')
+    
+    # Identificação de apuração
+    id_apuracao = db.Column(db.Integer, nullable=False, index=True)  # Sequence da apuração
+    
+    # Relacionamentos
+    lancamento_id = db.Column(db.Integer, db.ForeignKey('lancamentos.id'), nullable=False, index=True)
+    lancamento = db.relationship('Lancamento', foreign_keys=[lancamento_id])
+    
+    entidade_cliente_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
+    entidade_vendedor_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
+    
+    # Datas
+    dt_lancamento = db.Column(db.Date, nullable=False, index=True)
+    dt_vencimento = db.Column(db.Date, nullable=False, index=True)
+    dt_pagamento_recebimento = db.Column(db.Date, nullable=False, index=True)  # data_pagamento do lancamento
+    
+    # Valores
+    vl_nota = db.Column(db.Numeric(15, 2), nullable=False)  # valor_real
+    vl_imposto = db.Column(db.Numeric(15, 2), default=0.00)
+    vl_outros_custos = db.Column(db.Numeric(15, 2), default=0.00)
+    vl_repasse = db.Column(db.Numeric(15, 2), default=0.00)  # Valor de repasse
+    vl_liquido = db.Column(db.Numeric(15, 2), nullable=False)  # Base de cálculo
+    aliquota_aplicada = db.Column(db.Numeric(5, 2), nullable=False)  # Percentual aplicado
+    vl_comissao = db.Column(db.Numeric(15, 2), nullable=False)  # Valor da comissão
+    
+    # Situação
+    situacao = db.Column(db.String(20), default='ativo')  # ativo, estornado, reapurado
+    
+    # Metadados
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        db.Index('idx_comissao_empresa_apuracao', 'empresa_id', 'id_apuracao'),
+        db.Index('idx_comissao_empresa_lancamento', 'empresa_id', 'lancamento_id', 'entidade_cliente_id', 'entidade_vendedor_id'),
+    )
+    
+    def __repr__(self):
+        return f'<Comissao {self.id} - Apuração {self.id_apuracao} - R$ {self.vl_comissao}>'

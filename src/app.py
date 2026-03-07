@@ -67,6 +67,7 @@ def create_app(config_name=None):
     from src.routes.contas_banco import contas_banco_bp
     from src.routes.lancamentos import lancamentos_bp
     from src.routes.relatorios import relatorios_bp
+    from src.routes.comissoes import comissoes_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -75,6 +76,7 @@ def create_app(config_name=None):
     app.register_blueprint(contas_banco_bp)
     app.register_blueprint(lancamentos_bp)
     app.register_blueprint(relatorios_bp)
+    app.register_blueprint(comissoes_bp)
 
     @app.route('/suporte')
     def suporte():

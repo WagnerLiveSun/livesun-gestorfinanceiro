@@ -11,20 +11,58 @@ def index():
     """List all chart of accounts"""
     page = request.args.get('page', 1, type=int)
     tipo = request.args.get('tipo', '')
-    
+    conta_ini = request.args.get('conta_ini', '')
+    conta_fim = request.args.get('conta_fim', '')
+    entidade_id = request.args.get('entidade_id', '')
+
+    from src.models import Entidade
+    entidades = Entidade.query.order_by(Entidade.nome).all()
+
     query = FluxoContaModel.query
-    
     if tipo:
         query = query.filter_by(tipo=tipo)
-    
+    # Filtro de conta (intervalo)
+    # Filtro de conta (intervalo real, considerando códigos com subníveis)
+    if conta_ini or conta_fim:
+        contas_todas = FluxoContaModel.query.order_by(FluxoContaModel.codigo).all()
+        def in_intervalo(codigo):
+            if conta_ini and codigo < conta_ini:
+                return False
+            if conta_fim and codigo > conta_fim:
+                return False
+            return True
+        codigos_intervalo = [c.codigo for c in contas_todas if in_intervalo(c.codigo)]
+        query = query.filter(FluxoContaModel.codigo.in_(codigos_intervalo))
+    # Filtro de entidade: mostrar apenas contas que possuem lançamentos para a entidade
+    if entidade_id:
+        from src.models import Lancamento
+        contas_ids = db.session.query(Lancamento.fluxo_conta_id).filter(Lancamento.entidade_id == entidade_id).distinct()
+        query = query.filter(FluxoContaModel.id.in_(contas_ids))
+
+    # Exibir sintéticas ao filtrar por conta analítica
+    if conta_ini and conta_fim:
+        contas_intervalo = FluxoContaModel.query.filter(FluxoContaModel.codigo >= conta_ini, FluxoContaModel.codigo <= conta_fim).all()
+        codigos_intervalo = [c.codigo for c in contas_intervalo]
+        sint_codigos = set()
+        for cod in codigos_intervalo:
+            partes = cod.split('.')
+            for i in range(1, len(partes)):
+                sint_codigos.add('.'.join(partes[:i]))
+        if sint_codigos:
+            query = query.union(FluxoContaModel.query.filter(FluxoContaModel.codigo.in_(sint_codigos)))
+
     pagination = query.order_by(FluxoContaModel.codigo).paginate(page=page, per_page=20)
     contas = pagination.items
-    
+
     return render_template(
         'fluxo/index.html',
         contas=contas,
         pagination=pagination,
-        tipo=tipo
+        tipo=tipo,
+        conta_ini=conta_ini,
+        conta_fim=conta_fim,
+        entidade_id=entidade_id,
+        entidades=entidades
     )
 
 
