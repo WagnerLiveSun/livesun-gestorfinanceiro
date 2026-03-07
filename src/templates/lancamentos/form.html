@@ -91,16 +91,30 @@
                     value="{{ lancamento.numero_documento if lancamento else '' }}" required style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
 
-            <div class="col-md-2 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Real *</label>
                 <input type="number" name="valor_real" class="form-control" step="0.01"
                     value="{{ lancamento.valor_real if lancamento else '0' }}" required style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
 
-            <div class="col-md-2 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Pago</label>
                 <input type="number" name="valor_pago" class="form-control" step="0.01"
                     value="{{ lancamento.valor_pago if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Valor Imposto</label>
+                <input type="number" name="valor_imposto" class="form-control" step="0.01"
+                    value="{{ lancamento.valor_imposto if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Valor Outros Custos</label>
+                <input type="number" name="valor_outros_custos" class="form-control" step="0.01"
+                    value="{{ lancamento.valor_outros_custos if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
         </div>
 

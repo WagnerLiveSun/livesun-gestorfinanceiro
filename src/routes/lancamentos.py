@@ -56,6 +56,8 @@ def criar():
                 entidade_id=request.form.get('entidade_id', type=int),
                 valor_real=float(request.form.get('valor_real')),
                 valor_pago=0.00 if not request.form.get('data_pagamento') else float(request.form.get('valor_real')),
+                valor_imposto=float(request.form.get('valor_imposto') or 0),
+                valor_outros_custos=float(request.form.get('valor_outros_custos') or 0),
                 numero_documento=request.form.get('numero_documento'),
                 observacoes=request.form.get('observacoes')
             )
@@ -105,6 +107,8 @@ def editar(id):
             lancamento.conta_banco_id = request.form.get('conta_banco_id', type=int)
             lancamento.entidade_id = request.form.get('entidade_id', type=int)
             lancamento.valor_real = float(request.form.get('valor_real'))
+            lancamento.valor_imposto = float(request.form.get('valor_imposto') or 0)
+            lancamento.valor_outros_custos = float(request.form.get('valor_outros_custos') or 0)
             lancamento.numero_documento = request.form.get('numero_documento')
             lancamento.observacoes = request.form.get('observacoes')
             

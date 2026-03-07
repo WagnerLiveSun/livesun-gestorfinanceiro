@@ -86,12 +86,15 @@ def criar():
             flash('Erro ao criar entidade. Verifique os dados e tente novamente.', 'danger')
             return redirect(url_for('entidades.criar'))
     
-    # Obter vendedores para o formulário
-    vendedores = Entidade.query.filter_by(
-        empresa_id=current_user.empresa_id,
-        tipo='V',
-        ativo=True
-    ).order_by(Entidade.nome).all()
+    # Obter vendedores para o formulário (pode estar vazio em setup inicial)
+    try:
+        vendedores = Entidade.query.filter_by(
+            empresa_id=current_user.empresa_id,
+            tipo='V',
+            ativo=True
+        ).order_by(Entidade.nome).all()
+    except Exception:
+        vendedores = []
     
     return render_template('entidades/form.html', action='criar', vendedores=vendedores)
 
@@ -139,12 +142,15 @@ def editar(id):
             logging.error('Erro ao atualizar entidade: %s\n%s', e, traceback.format_exc())
             flash(f'Erro ao atualizar entidade: {str(e)}', 'danger')
     
-    # Obter vendedores para o formulário
-    vendedores = Entidade.query.filter_by(
-        empresa_id=current_user.empresa_id,
-        tipo='V',
-        ativo=True
-    ).order_by(Entidade.nome).all()
+    # Obter vendedores para o formulário (pode estar vazio em setup inicial)
+    try:
+        vendedores = Entidade.query.filter_by(
+            empresa_id=current_user.empresa_id,
+            tipo='V',
+            ativo=True
+        ).order_by(Entidade.nome).all()
+    except Exception:
+        vendedores = []
     
     return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores)
 
