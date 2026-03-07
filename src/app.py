@@ -117,7 +117,7 @@ def create_app(config_name=None):
     # Create database tables
     with app.app_context():
         db.create_all()
-        _ensure_user_settings_columns()
+        _ensure_schema_compatibility()
         _create_default_user()
         logger.info('Database tables created successfully')
     
@@ -180,21 +180,51 @@ def _create_default_user():
         db.session.commit()
 
 
-def _ensure_user_settings_columns():
-    """Ensure new user settings columns exist for existing databases."""
+def _ensure_schema_compatibility():
+    """Ensure required columns exist in databases created before recent releases."""
     try:
-        inspector = inspect(db.engine)
-        columns = {col['name'] for col in inspector.get_columns('users')}
-        if 'dashboard_chart_days' not in columns:
-            with db.engine.begin() as conn:
-                conn.execute(
-                    text('ALTER TABLE users ADD COLUMN dashboard_chart_days INTEGER DEFAULT 30')
-                )
-            logger.info('Added dashboard_chart_days column to users table')
+        _ensure_columns(
+            'users',
+            {
+                'dashboard_chart_days': 'dashboard_chart_days INTEGER DEFAULT 30'
+            }
+        )
+
+        _ensure_columns(
+            'entidades',
+            {
+                'aliquota_comissao_especifica': 'aliquota_comissao_especifica DECIMAL(5,2) NULL',
+                'percentual_repasse': 'percentual_repasse DECIMAL(5,2) DEFAULT 0.00',
+                'entidade_vendedor_padrao_id': 'entidade_vendedor_padrao_id INTEGER NULL'
+            }
+        )
+
+        _ensure_columns(
+            'lancamentos',
+            {
+                'valor_imposto': 'valor_imposto DECIMAL(15,2) DEFAULT 0.00',
+                'valor_outros_custos': 'valor_outros_custos DECIMAL(15,2) DEFAULT 0.00'
+            }
+        )
     except Exception as exc:
         import traceback
-        logger.error('Erro ao verificar/atualizar schema da tabela users: %s\n%s', exc, traceback.format_exc())
-        logger.info('Default admin user created: admin/admin123')
+        logger.error('Erro ao verificar/atualizar compatibilidade de schema: %s\n%s', exc, traceback.format_exc())
+
+
+def _ensure_columns(table_name, expected_columns):
+    """Add missing columns to an existing table without dropping data."""
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    if table_name not in existing_tables:
+        return
+
+    existing_columns = {col['name'] for col in inspector.get_columns(table_name)}
+    with db.engine.begin() as conn:
+        for column_name, column_def in expected_columns.items():
+            if column_name in existing_columns:
+                continue
+            conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_def}'))
+            logger.info('Coluna adicionada: %s.%s', table_name, column_name)
 
 
 

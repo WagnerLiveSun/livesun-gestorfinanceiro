@@ -338,6 +338,32 @@
                 </ul>
 
                 <div class="ls-sidebar-section-label">
+                    <i class="fas fa-percent"></i> Comissões
+                </div>
+                <ul class="ls-sidebar-nav">
+                    <li>
+                        <a class="ls-sidebar-link {% if request.endpoint and request.endpoint.startswith('comissoes') and request.endpoint != 'comissoes.apurar' and request.endpoint != 'comissoes.relatorio' and request.endpoint != 'comissoes.parametros' %}active{% endif %}" href="{{ url_for('comissoes.listar') }}">
+                            <i class="fas fa-list"></i> Comissões
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ls-sidebar-link {% if request.endpoint == 'comissoes.apurar' %}active{% endif %}" href="{{ url_for('comissoes.apurar') }}">
+                            <i class="fas fa-calculator"></i> Apuração
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ls-sidebar-link {% if request.endpoint == 'comissoes.relatorio' %}active{% endif %}" href="{{ url_for('comissoes.relatorio') }}">
+                            <i class="fas fa-chart-line"></i> Relatório
+                        </a>
+                    </li>
+                    <li>
+                        <a class="ls-sidebar-link {% if request.endpoint == 'comissoes.parametros' %}active{% endif %}" href="{{ url_for('comissoes.parametros') }}">
+                            <i class="fas fa-sliders-h"></i> Parâmetros
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="ls-sidebar-section-label">
                     <i class="fas fa-chart-bar"></i> Relatórios
                 </div>
                 <ul class="ls-sidebar-nav">
