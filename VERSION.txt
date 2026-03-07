@@ -1,0 +1,42 @@
+VERSÃO: 1.0.0
+DATA: 2026-03-07
+HORA: 01:04:41
+
+CHANGELOG v1.0.0 (2026-03-07)
+==============================
+
+✅ CORREÇÕES CRÍTICAS:
+- Fix: Erro de sintaxe Jinja2 no template entidades/form.html (faltava {% endblock %})
+- Fix: Proteção completa de acesso a empresa_id e vendedores em todas as rotas de entidades
+- Fix: Logging detalhado com traceback completo para diagnóstico de erros
+- Fix: Tratamento de erros robusto nas funções criar() e editar() de entidades
+- Fix: Proteção de template contra valores nulos em current_user
+
+✅ MELHORIAS DE DEPLOYMENT:
+- Fix: Expansão correta da variável PORT no Railway (${PORT:-5000})
+- Fix: Healthcheck ajustado para /auth/login
+- Implementação de schema auto-migration no startup da aplicação
+- Docker multi-stage build otimizado
+
+✅ NOVAS FUNCIONALIDADES:
+- Menu de Comissões adicionado ao sidebar (4 opções: Lista, Apuração, Relatório, Parâmetros)
+- Campos valor_imposto e valor_outros_custos no formulário de lançamentos
+- Sistema de compatibilidade de schema automático
+
+✅ INFRAESTRUTURA:
+- Deployment automático no Railway via Git push
+- Scripts de deployment para Hostinger (FTP + SQL)
+- Docker Compose para desenvolvimento local
+- CI/CD pipeline com GitHub Actions
+
+📦 COMPONENTES:
+- Flask 3.0.0 + SQLAlchemy 2.0.23
+- MySQL 8.0 (Railway + Hostinger)
+- Gunicorn WSGI (4 workers, 120s timeout)
+- Python 3.12-slim
+
+🌐 AMBIENTES:
+- Produção: https://appfinanceiro.livesun.live (Railway)
+- Database: MySQL Railway + Hostinger fallback
+
+✅ STATUS: PRODUÇÃO ESTÁVEL
