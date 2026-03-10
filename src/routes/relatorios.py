@@ -42,7 +42,7 @@ def export_balancete():
 	status = request.args.get('status', '')
 
 	# Unifica lógica de filtro igual à tela
-	contas_query = FluxoContaModel.query.filter_by(ativo=True)
+	contas_query = FluxoContaModel.query.filter_by(empresa_id=current_user.empresa_id, ativo=True)
 	contas = contas_query.order_by(FluxoContaModel.codigo.asc()).all()
 	conta_ini = request.args.get('conta_ini', '')
 	conta_fim = request.args.get('conta_fim', '')
@@ -193,7 +193,7 @@ def balancete_financeiro():
 	status = request.args.get('status', '')
 
 	# Filtros
-	contas = FluxoContaModel.query.filter_by(ativo=True).order_by(FluxoContaModel.codigo.asc()).all()  # Igual ao fluxo de caixa
+	contas = FluxoContaModel.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).order_by(FluxoContaModel.codigo.asc()).all()  # Igual ao fluxo de caixa
 	# Para o relatório, aplique o filtro de intervalo se houver
 	if conta_ini or conta_fim:
 		def in_intervalo(codigo):
@@ -225,7 +225,7 @@ def balancete_financeiro():
 	# Nome da entidade para cabeçalho
 	entidade_nome = None
 	if entidade:
-		ent = Entidade.query.get(int(entidade))
+		ent = Entidade.query.filter_by(id=int(entidade), empresa_id=current_user.empresa_id).first()
 		entidade_nome = ent.nome if ent else None
 
 	# Geração do relatório
@@ -263,7 +263,7 @@ def fluxo_caixa_csv():
 	data_inicio = request.args.get('data_inicio', '')
 	data_fim = request.args.get('data_fim', '')
 	# Filtros básicos
-	query = Lancamento.query
+	query = Lancamento.query.filter_by(empresa_id=current_user.empresa_id)
 	if data_inicio:
 		data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
 		query = query.filter(or_(Lancamento.data_pagamento >= data_inicio_dt, Lancamento.data_vencimento >= data_inicio_dt))
@@ -310,7 +310,7 @@ def export_fluxo_caixa_csv():
 	if Workbook is None:
 		flash('Exportação para Excel indisponível: biblioteca "openpyxl" não está instalada no ambiente.', 'warning')
 		return redirect(url_for('relatorios.fluxo_caixa'))
-	query = Lancamento.query
+	query = Lancamento.query.filter_by(empresa_id=current_user.empresa_id)
 	if data_inicio:
 		data_inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d').date()
 		query = query.filter(or_(Lancamento.data_pagamento >= data_inicio_dt, Lancamento.data_vencimento >= data_inicio_dt))
@@ -361,9 +361,12 @@ def fluxo_caixa():
 
 	def get_saldo_inicial_por_conta():
 		if conta_banco_id:
-			contas = ContaBanco.query.filter(ContaBanco.id == conta_banco_id).all()
+			contas = ContaBanco.query.filter(
+				ContaBanco.empresa_id == current_user.empresa_id,
+				ContaBanco.id == conta_banco_id
+			).all()
 		else:
-			contas = ContaBanco.query.filter_by(ativo=True).all()
+			contas = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
 		return {c.id: Decimal(str(c.saldo_inicial or 0)) for c in contas}
 
 	def get_saldo_inicial_total():
@@ -423,7 +426,10 @@ def fluxo_caixa():
 	saldo_inicial_total = get_saldo_inicial_total()
 
 	# Build base queries
-	query_realizado = Lancamento.query.filter(Lancamento.status == 'pago')
+	query_realizado = Lancamento.query.filter(
+		Lancamento.empresa_id == current_user.empresa_id,
+		Lancamento.status == 'pago'
+	)
 	if data_inicio:
 		data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
 		query_realizado = query_realizado.filter(Lancamento.data_pagamento >= data_inicio)
@@ -437,7 +443,7 @@ def fluxo_caixa():
 	lancamentos_realizado = query_realizado.order_by(Lancamento.data_pagamento.asc()).all()
 
 	# Build previsto query
-	query_previsto = Lancamento.query
+	query_previsto = Lancamento.query.filter_by(empresa_id=current_user.empresa_id)
 	if data_inicio:
 		query_previsto = query_previsto.filter(Lancamento.data_vencimento >= data_inicio)
 	if data_fim:
@@ -463,8 +469,8 @@ def fluxo_caixa():
 	)
 
 	# Get filter options
-	contas_banco = ContaBanco.query.filter_by(ativo=True).all()
-	contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
+	contas_banco = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
+	contas_fluxo = FluxoContaModel.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
 
 	return render_template(
 		'relatorios/fluxo_caixa.html',
@@ -494,9 +500,12 @@ def export_fluxo_caixa():
 
 	def get_saldo_inicial_por_conta():
 		if conta_banco_id:
-			contas = ContaBanco.query.filter(ContaBanco.id == conta_banco_id).all()
+			contas = ContaBanco.query.filter(
+				ContaBanco.empresa_id == current_user.empresa_id,
+				ContaBanco.id == conta_banco_id
+			).all()
 		else:
-			contas = ContaBanco.query.filter_by(ativo=True).all()
+			contas = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
 		return {c.id: Decimal(str(c.saldo_inicial or 0)) for c in contas}
 
 	def get_saldo_inicial_total():
@@ -525,8 +534,11 @@ def export_fluxo_caixa():
 			rows.append((data_ref, saldo_anterior, pagar, receber, saldo_atual))
 		return rows
 
-	query_realizado = Lancamento.query.filter(Lancamento.status == 'pago')
-	query_previsto = Lancamento.query
+	query_realizado = Lancamento.query.filter(
+		Lancamento.empresa_id == current_user.empresa_id,
+		Lancamento.status == 'pago'
+	)
+	query_previsto = Lancamento.query.filter_by(empresa_id=current_user.empresa_id)
 
 	if data_inicio:
 		data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()

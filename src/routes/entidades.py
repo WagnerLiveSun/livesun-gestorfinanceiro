@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from src.models import db, Entidade
 from datetime import datetime
+from src.tenant import scoped_query, scoped_get_or_404, tenant_id
 
 entidades_bp = Blueprint('entidades', __name__, url_prefix='/entidades')
 
@@ -14,7 +15,7 @@ def index():
     tipo = request.args.get('tipo', '')
     busca = request.args.get('busca', '')
     
-    query = Entidade.query
+    query = scoped_query(Entidade)
     
     if tipo:
         query = query.filter_by(tipo=tipo)
@@ -51,8 +52,7 @@ def criar():
     # Tentar buscar vendedores
     try:
         if current_user and hasattr(current_user, 'empresa_id') and current_user.empresa_id:
-            vendedores = Entidade.query.filter_by(
-                empresa_id=current_user.empresa_id,
+            vendedores = scoped_query(Entidade).filter_by(
                 tipo='V',
                 ativo=True
             ).order_by(Entidade.nome).all()
@@ -68,7 +68,7 @@ def criar():
                 return render_template('entidades/form.html', action='criar', vendedores=vendedores)
 
             entidade = Entidade(
-                empresa_id=current_user.empresa_id,
+                empresa_id=tenant_id(),
                 tipo=request.form.get('tipo'),
                 cnpj_cpf=request.form.get('cnpj_cpf'),
                 inscricao_estadual=request.form.get('inscricao_estadual'),
@@ -117,7 +117,7 @@ def editar(id):
     import logging
     logger = logging.getLogger(__name__)
     
-    entidade = Entidade.query.get_or_404(id)
+    entidade = scoped_get_or_404(Entidade, id)
     
     # ALWAYS initialize vendedores as empty list
     vendedores = []
@@ -125,8 +125,7 @@ def editar(id):
     # Protected vendedores query
     try:
         if current_user and hasattr(current_user, 'empresa_id') and current_user.empresa_id:
-            vendedores = Entidade.query.filter_by(
-                empresa_id=current_user.empresa_id,
+            vendedores = scoped_query(Entidade).filter_by(
                 tipo='V',
                 ativo=True
             ).order_by(Entidade.nome).all()
@@ -182,7 +181,7 @@ def editar(id):
 @login_required
 def ver(id):
     """View entity details"""
-    entidade = Entidade.query.get_or_404(id)
+    entidade = scoped_get_or_404(Entidade, id)
     lancamentos = entidade.lancamentos.limit(10).all()
     
     return render_template(
@@ -196,7 +195,7 @@ def ver(id):
 @login_required
 def deletar(id):
     """Delete entity"""
-    entidade = Entidade.query.get_or_404(id)
+    entidade = scoped_get_or_404(Entidade, id)
     
     try:
         # Soft delete - just deactivate
@@ -219,7 +218,7 @@ def api_search():
     termo = request.args.get('q', '')
     tipo = request.args.get('tipo', '')
     
-    query = Entidade.query.filter(Entidade.ativo == True)
+    query = scoped_query(Entidade).filter(Entidade.ativo == True)
     
     if tipo:
         query = query.filter_by(tipo=tipo)

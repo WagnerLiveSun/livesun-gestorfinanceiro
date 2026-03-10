@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from src.models import db, Lancamento, Entidade, FluxoContaModel, ContaBanco
 from datetime import datetime, date
 from src.services.fluxo_consolidado import consolidar_fluxo_caixa
+from src.tenant import scoped_query, scoped_get_or_404, tenant_id
 
 lancamentos_bp = Blueprint('lancamentos', __name__, url_prefix='/lancamentos')
 
@@ -15,7 +16,7 @@ def index():
     status = request.args.get('status', '')
     tipo = request.args.get('tipo', '')  # P para Pagamento, R para Recebimento
     
-    query = Lancamento.query
+    query = scoped_query(Lancamento)
     
     if status:
         query = query.filter_by(status=status)
@@ -39,14 +40,14 @@ def index():
 @login_required
 def criar():
     """Create new lancamento"""
-    entidades = Entidade.query.filter_by(ativo=True).all()
-    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
-    contas_banco = ContaBanco.query.filter_by(ativo=True).all()
+    entidades = scoped_query(Entidade).filter_by(ativo=True).all()
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
+    contas_banco = scoped_query(ContaBanco).filter_by(ativo=True).all()
     
     if request.method == 'POST':
         try:
             lancamento = Lancamento(
-                empresa_id=current_user.empresa_id,
+                empresa_id=tenant_id(),
                 data_evento=datetime.strptime(request.form.get('data_evento'), '%Y-%m-%d').date(),
                 data_vencimento=datetime.strptime(request.form.get('data_vencimento'), '%Y-%m-%d').date(),
                 data_pagamento=None,
@@ -94,10 +95,10 @@ def criar():
 @login_required
 def editar(id):
     """Edit lancamento"""
-    lancamento = Lancamento.query.get_or_404(id)
-    entidades = Entidade.query.filter_by(ativo=True).all()
-    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
-    contas_banco = ContaBanco.query.filter_by(ativo=True).all()
+    lancamento = scoped_get_or_404(Lancamento, id)
+    entidades = scoped_query(Entidade).filter_by(ativo=True).all()
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
+    contas_banco = scoped_query(ContaBanco).filter_by(ativo=True).all()
     
     if request.method == 'POST':
         try:
@@ -148,7 +149,7 @@ def editar(id):
 @login_required
 def pagar(id):
     """Mark lancamento as paid"""
-    lancamento = Lancamento.query.get_or_404(id)
+    lancamento = scoped_get_or_404(Lancamento, id)
     
     try:
         lancamento.data_pagamento = date.today()
@@ -172,7 +173,7 @@ def pagar(id):
 @login_required
 def deletar(id):
     """Delete lancamento"""
-    lancamento = Lancamento.query.get_or_404(id)
+    lancamento = scoped_get_or_404(Lancamento, id)
     
     try:
         db.session.delete(lancamento)

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from src.models import db, FluxoContaModel
+from src.tenant import scoped_query, scoped_get_or_404, tenant_id
 
 fluxo_bp = Blueprint('fluxo', __name__, url_prefix='/fluxo')
 
@@ -16,15 +17,15 @@ def index():
     entidade_id = request.args.get('entidade_id', '')
 
     from src.models import Entidade
-    entidades = Entidade.query.order_by(Entidade.nome).all()
+    entidades = scoped_query(Entidade).order_by(Entidade.nome).all()
 
-    query = FluxoContaModel.query
+    query = scoped_query(FluxoContaModel)
     if tipo:
         query = query.filter_by(tipo=tipo)
     # Filtro de conta (intervalo)
     # Filtro de conta (intervalo real, considerando códigos com subníveis)
     if conta_ini or conta_fim:
-        contas_todas = FluxoContaModel.query.order_by(FluxoContaModel.codigo).all()
+        contas_todas = scoped_query(FluxoContaModel).order_by(FluxoContaModel.codigo).all()
         def in_intervalo(codigo):
             if conta_ini and codigo < conta_ini:
                 return False
@@ -36,12 +37,18 @@ def index():
     # Filtro de entidade: mostrar apenas contas que possuem lançamentos para a entidade
     if entidade_id:
         from src.models import Lancamento
-        contas_ids = db.session.query(Lancamento.fluxo_conta_id).filter(Lancamento.entidade_id == entidade_id).distinct()
+        contas_ids = db.session.query(Lancamento.fluxo_conta_id).filter(
+            Lancamento.empresa_id == current_user.empresa_id,
+            Lancamento.entidade_id == entidade_id
+        ).distinct()
         query = query.filter(FluxoContaModel.id.in_(contas_ids))
 
     # Exibir sintéticas ao filtrar por conta analítica
     if conta_ini and conta_fim:
-        contas_intervalo = FluxoContaModel.query.filter(FluxoContaModel.codigo >= conta_ini, FluxoContaModel.codigo <= conta_fim).all()
+        contas_intervalo = scoped_query(FluxoContaModel).filter(
+            FluxoContaModel.codigo >= conta_ini,
+            FluxoContaModel.codigo <= conta_fim
+        ).all()
         codigos_intervalo = [c.codigo for c in contas_intervalo]
         sint_codigos = set()
         for cod in codigos_intervalo:
@@ -49,7 +56,11 @@ def index():
             for i in range(1, len(partes)):
                 sint_codigos.add('.'.join(partes[:i]))
         if sint_codigos:
-            query = query.union(FluxoContaModel.query.filter(FluxoContaModel.codigo.in_(sint_codigos)))
+            query = query.union(
+                scoped_query(FluxoContaModel).filter(
+                    FluxoContaModel.codigo.in_(sint_codigos)
+                )
+            )
 
     pagination = query.order_by(FluxoContaModel.codigo).paginate(page=page, per_page=20)
     contas = pagination.items
@@ -73,6 +84,7 @@ def criar():
     if request.method == 'POST':
         try:
             conta = FluxoContaModel(
+                empresa_id=tenant_id(),
                 codigo=request.form.get('codigo'),
                 descricao=request.form.get('descricao'),
                 tipo=request.form.get('tipo'),  # P ou R
@@ -101,7 +113,7 @@ def criar():
 @login_required
 def editar(id):
     """Edit chart of account"""
-    conta = FluxoContaModel.query.get_or_404(id)
+    conta = scoped_get_or_404(FluxoContaModel, id)
     
     if request.method == 'POST':
         try:
@@ -131,7 +143,7 @@ def editar(id):
 @login_required
 def deletar(id):
     """Delete chart of account"""
-    conta = FluxoContaModel.query.get_or_404(id)
+    conta = scoped_get_or_404(FluxoContaModel, id)
     
     try:
         conta.ativo = False
@@ -153,7 +165,7 @@ def api_search():
     termo = request.args.get('q', '')
     tipo = request.args.get('tipo', '')
     
-    query = FluxoContaModel.query.filter(FluxoContaModel.ativo == True)
+    query = scoped_query(FluxoContaModel).filter(FluxoContaModel.ativo == True)
     
     if tipo:
         query = query.filter_by(tipo=tipo)

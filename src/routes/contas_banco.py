@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required
 from flask_login import current_user
 from src.models import db, ContaBanco, FluxoContaModel
+from src.tenant import scoped_query, scoped_get_or_404, tenant_id
 
 contas_banco_bp = Blueprint('contas_banco', __name__, url_prefix='/contas-banco')
 
@@ -12,7 +13,7 @@ def index():
     """List all bank accounts"""
     page = request.args.get('page', 1, type=int)
     
-    pagination = ContaBanco.query.paginate(page=page, per_page=20)
+    pagination = scoped_query(ContaBanco).paginate(page=page, per_page=20)
     contas = pagination.items
     
     return render_template(
@@ -26,7 +27,7 @@ def index():
 @login_required
 def criar():
     """Create new bank account"""
-    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
     
     if request.method == 'POST':
         try:
@@ -36,7 +37,7 @@ def criar():
                 return redirect(url_for('contas_banco.criar'))
 
             conta = ContaBanco(
-                empresa_id=current_user.empresa_id,
+                empresa_id=tenant_id(),
                 nome=request.form.get('nome'),
                 banco=request.form.get('banco'),
                 agencia=request.form.get('agencia'),
@@ -72,8 +73,8 @@ def criar():
 @login_required
 def editar(id):
     """Edit bank account"""
-    conta = ContaBanco.query.get_or_404(id)
-    contas_fluxo = FluxoContaModel.query.filter_by(ativo=True).all()
+    conta = scoped_get_or_404(ContaBanco, id)
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
     
     if request.method == 'POST':
         try:
@@ -110,7 +111,7 @@ def editar(id):
 @login_required
 def ver(id):
     """View bank account details"""
-    conta = ContaBanco.query.get_or_404(id)
+    conta = scoped_get_or_404(ContaBanco, id)
     lancamentos = conta.lancamentos.order_by('data_evento DESC').limit(20).all()
     
     return render_template(
@@ -124,7 +125,7 @@ def ver(id):
 @login_required
 def deletar(id):
     """Delete bank account"""
-    conta = ContaBanco.query.get_or_404(id)
+    conta = scoped_get_or_404(ContaBanco, id)
     
     try:
         conta.ativo = False
@@ -145,7 +146,7 @@ def api_search():
     """API for bank accounts search"""
     termo = request.args.get('q', '')
     
-    query = ContaBanco.query.filter(ContaBanco.ativo == True)
+    query = scoped_query(ContaBanco).filter(ContaBanco.ativo == True)
     
     if termo:
         query = query.filter(
