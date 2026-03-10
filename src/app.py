@@ -2,6 +2,7 @@ import os
 import logging
 from decimal import Decimal, InvalidOperation
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -169,19 +170,34 @@ def _create_default_user():
         empresa.cnpj = default_company_cnpj
         db.session.commit()
 
+    # Backward-compatible lookup:
+    # - New schema: username unique per (empresa_id, username)
+    # - Old schema: username globally unique
     admin_user = User.query.filter_by(empresa_id=empresa.id, username='admin').first()
-    if not admin_user:
-        admin_user = User(
-            username='admin',
-            email='admin@livesun.local',
-            full_name='Administrador',
-            is_admin=True,
-            is_active=True,
-            empresa_id=empresa.id
-        )
-        admin_user.set_password('admin123')
-        db.session.add(admin_user)
+    if admin_user:
+        return
+
+    existing_global_admin = User.query.filter_by(username='admin').first()
+    if existing_global_admin:
+        # Avoid duplicate insert in databases that still enforce global unique username.
+        return
+
+    admin_user = User(
+        username='admin',
+        email='admin@livesun.local',
+        full_name='Administrador',
+        is_admin=True,
+        is_active=True,
+        empresa_id=empresa.id
+    )
+    admin_user.set_password('admin123')
+    db.session.add(admin_user)
+    try:
         db.session.commit()
+    except IntegrityError:
+        # If another process created admin concurrently (or legacy unique index exists),
+        # don't block app startup.
+        db.session.rollback()
 
 
 def _ensure_schema_compatibility():
