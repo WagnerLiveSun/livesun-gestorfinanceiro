@@ -84,6 +84,26 @@ def run() -> bool:
                     )
                     print(f'  + Lançamentos ajustados por entidade: {updated.rowcount}')
 
+                # 2.1) Fix fluxo_conta cross-company references by matching codigo
+                # within the lancamento company (choosing the smallest id when duplicated).
+                if _table_exists(inspector, 'lancamentos') and _table_exists(inspector, 'fluxo_contas_modelo'):
+                    updated_fluxo = conn.execute(
+                        text(
+                            """
+                            UPDATE lancamentos l
+                            JOIN fluxo_contas_modelo f_wrong ON f_wrong.id = l.fluxo_conta_id
+                            JOIN (
+                                SELECT f2.empresa_id, f2.codigo, MIN(f2.id) AS id_correto
+                                FROM fluxo_contas_modelo f2
+                                GROUP BY f2.empresa_id, f2.codigo
+                            ) f_map ON f_map.empresa_id = l.empresa_id AND f_map.codigo = f_wrong.codigo
+                            SET l.fluxo_conta_id = f_map.id_correto
+                            WHERE l.empresa_id <> f_wrong.empresa_id
+                            """
+                        )
+                    )
+                    print(f'  + Lançamentos ajustados por fluxo/código: {updated_fluxo.rowcount}')
+
             # 3) Consistency report for cross-tenant references.
             inconsistencies = {
                 'lancamentos_vs_contas_banco': db.session.execute(
