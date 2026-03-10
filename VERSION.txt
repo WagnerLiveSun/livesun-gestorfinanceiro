@@ -1,6 +1,32 @@
-VERSÃO: 1.0.0
-DATA: 2026-03-07
-HORA: 01:04:41
+VERSÃO: 1.1.0
+DATA: 2026-03-10
+HORA: 00:00:00
+
+CHANGELOG v1.1.0 (2026-03-10)
+==============================
+
+✅ SEGURANÇA / ISOLAMENTO MULTI-TENANT:
+- Todas as queries de relatorios.py, dashboard.py, lancamentos.py, entidades.py, fluxo.py, contas_banco.py filtradas por empresa_id
+- Novo helper src/tenant.py (scoped_query, scoped_get_or_404)
+- Script de migração migrate_tenant_isolation.py: índices de empresa_id em 8 tabelas
+- Script SQL migrations/002_fix_cross_tenant_fluxo_reference.sql para diagnóstico de referências cross-tenant
+
+✅ AUTENTICAÇÃO POR EMPRESA:
+- Login alterado para CPF/CNPJ da empresa + username + senha
+- Username único por empresa (UniqueConstraint empresa_id+username); email globalmente único
+- Helper _normalize_document() para aceitar CPF/CNPJ formatado ou só dígitos
+- Campo CPF/CNPJ adicionado ao formulário de login
+- Hints de escopo de username em register.html e add_user.html
+- Empresa Padrão com CNPJ 00000000000000 criada automaticamente no boot
+- Script de migração migrate_user_login_scope.py para schema legado
+
+✅ CORREÇÕES DE DEPLOY:
+- Hotfix: _create_default_user() com verificação backward-compatible para schema legado
+- Catch de IntegrityError no startup para evitar crash quando índice global de username ainda existe
+
+✅ TESTES:
+- test_tenant_isolation.py atualizado: mesmo username em empresas diferentes permitido
+- 6 testes passando (incluindo test_same_username_allowed_in_different_companies e test_login_uses_company_scope)
 
 CHANGELOG v1.0.0 (2026-03-07)
 ==============================
