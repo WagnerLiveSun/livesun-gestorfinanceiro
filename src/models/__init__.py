@@ -22,11 +22,14 @@ class Empresa(db.Model):
 class User(UserMixin, db.Model):
     """User model for authentication"""
     __tablename__ = 'users'
+    __table_args__ = (
+        db.UniqueConstraint('empresa_id', 'username', name='uq_users_empresa_username'),
+    )
     
     id = db.Column(db.Integer, primary_key=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
     empresa = db.relationship('Empresa', backref='users')
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(80), nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120))

@@ -23,7 +23,7 @@ class TenantIsolationTestCase(unittest.TestCase):
 
         user_a = User(
             empresa_id=empresa_a.id,
-            username='user_a',
+            username='financeiro',
             email='user_a@test.local',
             full_name='User A',
             is_active=True,
@@ -33,13 +33,13 @@ class TenantIsolationTestCase(unittest.TestCase):
 
         user_b = User(
             empresa_id=empresa_b.id,
-            username='user_b',
+            username='financeiro',
             email='user_b@test.local',
             full_name='User B',
             is_active=True,
             is_admin=True,
         )
-        user_b.set_password('123456')
+        user_b.set_password('654321')
         db.session.add_all([user_a, user_b])
         db.session.flush()
 
@@ -133,10 +133,35 @@ class TenantIsolationTestCase(unittest.TestCase):
     def _login_as_user_a(self):
         response = self.client.post(
             '/auth/login',
-            data={'username': 'user_a', 'password': '123456'},
+            data={
+                'empresa_cnpj': '11111111000111',
+                'username': 'financeiro',
+                'password': '123456',
+            },
             follow_redirects=True,
         )
         self.assertEqual(response.status_code, 200)
+
+    def test_same_username_allowed_in_different_companies(self):
+        users = User.query.filter_by(username='financeiro').all()
+
+        self.assertEqual(len(users), 2)
+
+    def test_login_uses_company_scope(self):
+        response = self.client.post(
+            '/auth/login',
+            data={
+                'empresa_cnpj': '22222222000122',
+                'username': 'financeiro',
+                'password': '654321',
+            },
+            follow_redirects=True,
+        )
+        body = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Dashboard', body)
+        self.assertNotIn('Empresa, usuário ou senha inválidos', body)
 
     def test_entidades_list_isolated_by_company(self):
         self._login_as_user_a()

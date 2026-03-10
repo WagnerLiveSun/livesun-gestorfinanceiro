@@ -197,8 +197,13 @@
 
             <form method="POST" action="{{ url_for('auth.login') }}">
                 <div class="mb-3">
+                    <label for="empresa_cnpj" class="form-label">CPF/CNPJ da Empresa</label>
+                    <input type="text" class="form-control" id="empresa_cnpj" name="empresa_cnpj" placeholder="Somente números ou formatado" required autofocus>
+                </div>
+
+                <div class="mb-3">
                     <label for="username" class="form-label">Usuário</label>
-                    <input type="text" class="form-control" id="username" name="username" placeholder="admin" required autofocus>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="admin" required>
                 </div>
 
                 <div class="mb-3">

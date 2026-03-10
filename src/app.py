@@ -158,14 +158,18 @@ def create_app(config_name=None):
 def _create_default_user():
     """Create default admin user if not exists"""
     from src.models import Empresa
+    default_company_cnpj = '00000000000000'
     # Cria empresa padrão se não existir
     empresa = Empresa.query.filter_by(nome='Empresa Padrão').first()
     if not empresa:
-        empresa = Empresa(nome='Empresa Padrão', cnpj=None)
+        empresa = Empresa(nome='Empresa Padrão', cnpj=default_company_cnpj)
         db.session.add(empresa)
         db.session.commit()
+    elif not empresa.cnpj:
+        empresa.cnpj = default_company_cnpj
+        db.session.commit()
 
-    admin_user = User.query.filter_by(username='admin').first()
+    admin_user = User.query.filter_by(empresa_id=empresa.id, username='admin').first()
     if not admin_user:
         admin_user = User(
             username='admin',
@@ -240,7 +244,7 @@ if __name__ == '__main__':
     print(f'\n{"="*60} - app.py:190')
     print(f'LiveSun Financeiro  Sistema de Gestão Financeira - app.py:191')
     print(f'Servidor rodando em: http://localhost:{port} - app.py:192')
-    print(f'Login padrão: admin / admin123 - app.py:193')
+    print(f'Login padrão: empresa 00000000000000 / usuário admin / senha admin123 - app.py:193')
     print(f'{"="*60}\n - app.py:194')
     
     app.run(host=host, port=port, debug=debug)

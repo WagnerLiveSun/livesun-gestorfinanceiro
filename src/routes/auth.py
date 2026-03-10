@@ -4,6 +4,12 @@ from src.models import db, User, Empresa
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+
+def _normalize_document(value):
+    if not value:
+        return ''
+    return ''.join(ch for ch in value if ch.isdigit())
+
 @auth_bp.route('/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
@@ -29,7 +35,7 @@ def add_user():
             flash('Preencha todos os campos', 'danger')
             return redirect(url_for('auth.add_user'))
 
-        if User.query.filter_by(username=username).first():
+        if User.query.filter_by(empresa_id=current_user.empresa_id, username=username).first():
             flash('Usuário já existe', 'danger')
             return redirect(url_for('auth.add_user'))
         if User.query.filter_by(email=email).first():
@@ -62,14 +68,19 @@ def login():
     
     if request.method == 'POST':
             try:
+                empresa_cnpj = _normalize_document(request.form.get('empresa_cnpj'))
                 username = request.form.get('username')
                 password = request.form.get('password')
-                if not username or not password:
-                    flash('Preencha usuário e senha', 'danger')
+                if not empresa_cnpj or not username or not password:
+                    flash('Preencha empresa, usuário e senha', 'danger')
                     return redirect(url_for('auth.login'))
-                user = User.query.filter_by(username=username).first()
+                empresa = Empresa.query.filter_by(cnpj=empresa_cnpj).first()
+                if empresa is None:
+                    flash('Empresa não encontrada para o CPF/CNPJ informado', 'danger')
+                    return redirect(url_for('auth.login'))
+                user = User.query.filter_by(empresa_id=empresa.id, username=username).first()
                 if user is None or not user.check_password(password):
-                    flash('Usuário ou senha inválidos', 'danger')
+                    flash('Empresa, usuário ou senha inválidos', 'danger')
                     return redirect(url_for('auth.login'))
                 if not user.is_active:
                     flash('Usuário inativo', 'danger')
@@ -101,7 +112,7 @@ def register():
     if request.method == 'POST':
         try:
             empresa_nome = request.form.get('empresa_nome')
-            empresa_cnpj = request.form.get('empresa_cnpj')
+            empresa_cnpj = _normalize_document(request.form.get('empresa_cnpj'))
             username = request.form.get('username')
             email = request.form.get('email')
             password = request.form.get('password')
@@ -190,7 +201,7 @@ def register():
                 db.session.add(conta)
 
             # Verifica se já existe usuário com mesmo username/email
-            if User.query.filter_by(username=username).first():
+            if User.query.filter_by(empresa_id=empresa.id, username=username).first():
                 flash('Usuário já existe', 'danger')
                 db.session.rollback()
                 return redirect(url_for('auth.register'))
