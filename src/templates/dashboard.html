@@ -178,7 +178,8 @@
                                 <th>Documento</th>
                                 <th>Entidade</th>
                                 <th>Conta</th>
-                                <th class="text-end">Valor</th>
+                                <th class="text-end">Valor Real</th>
+                                <th class="text-end">Valor Pago/Recebido</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -190,6 +191,7 @@
                                 <td>{{ lancamento.entidade.nome if lancamento.entidade else 'N/A' }}</td>
                                 <td>{{ lancamento.fluxo_conta.codigo if lancamento.fluxo_conta else 'N/A' }}</td>
                                 <td class="text-end">R$ {{ lancamento.valor_real|brl }}</td>
+                                <td class="text-end">R$ {{ lancamento.valor_pago|brl }}</td>
                                 <td>
                                     {% if lancamento.status == 'pago' %}
                                         <span class="badge bg-success">Pago</span>

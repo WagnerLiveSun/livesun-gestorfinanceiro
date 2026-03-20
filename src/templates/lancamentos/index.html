@@ -51,7 +51,8 @@
                     <th>Data Evento</th>
                     <th>Data Vencimento</th>
                     <th>Conta Fluxo</th>
-                    <th class="text-end">Valor</th>
+                    <th class="text-end">Valor Real</th>
+                    <th class="text-end">Valor Pago/Recebido</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -65,6 +66,7 @@
                     <td>{{ lancamento.data_vencimento.strftime('%d/%m/%Y') if lancamento.data_vencimento else 'N/A' }}</td>
                     <td>{{ lancamento.fluxo_conta.codigo if lancamento.fluxo_conta else 'N/A' }}</td>
                     <td class="text-end fw-bold" style="color: #22c55e;">R$ {{ lancamento.valor_real|brl }}</td>
+                    <td class="text-end fw-bold" style="color: #93c5fd;">R$ {{ lancamento.valor_pago|brl }}</td>
                     <td>
                         {% if lancamento.status == 'pago' %}
                             <span class="badge bg-success">Pago</span>
@@ -96,7 +98,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">
+                    <td colspan="9" class="text-center text-muted py-4">
                         <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                         Nenhum lançamento encontrado
                     </td>

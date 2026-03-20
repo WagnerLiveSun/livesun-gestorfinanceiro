@@ -353,7 +353,7 @@
                     </li>
                     <li>
                         <a class="ls-sidebar-link {% if request.endpoint == 'comissoes.relatorio' %}active{% endif %}" href="{{ url_for('comissoes.relatorio') }}">
-                            <i class="fas fa-chart-line"></i> Relatório
+                            <i class="fas fa-chart-line"></i> Listagem de Comissões
                         </a>
                     </li>
                     <li>
@@ -378,8 +378,8 @@
                         </a>
                     </li>
                     <li>
-                        <a class="ls-sidebar-link" href="{{ url_for('relatorios.balancete_financeiro') }}">
-                            <i class="fas fa-balance-scale"></i> Balancete Financeiro
+                        <a class="ls-sidebar-link" href="{{ url_for('relatorios.listagem_lancamentos') }}">
+                            <i class="fas fa-list"></i> Listagem de Lançamentos
                         </a>
                     </li>
                 </ul>

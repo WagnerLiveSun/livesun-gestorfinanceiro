@@ -46,6 +46,14 @@ def criar():
     
     if request.method == 'POST':
         try:
+            valor_real_raw = (request.form.get('valor_real') or '').strip()
+            if not valor_real_raw:
+                raise ValueError('Valor Real é obrigatório.')
+
+            valor_real = float(valor_real_raw)
+            if valor_real <= 0:
+                raise ValueError('Valor Real deve ser maior que zero.')
+
             lancamento = Lancamento(
                 empresa_id=tenant_id(),
                 data_evento=datetime.strptime(request.form.get('data_evento'), '%Y-%m-%d').date(),
@@ -55,8 +63,8 @@ def criar():
                 fluxo_conta_id=request.form.get('fluxo_conta_id', type=int),
                 conta_banco_id=request.form.get('conta_banco_id', type=int),
                 entidade_id=request.form.get('entidade_id', type=int),
-                valor_real=float(request.form.get('valor_real')),
-                valor_pago=0.00 if not request.form.get('data_pagamento') else float(request.form.get('valor_real')),
+                valor_real=valor_real,
+                valor_pago=0.00 if not request.form.get('data_pagamento') else valor_real,
                 valor_imposto=float(request.form.get('valor_imposto') or 0),
                 valor_outros_custos=float(request.form.get('valor_outros_custos') or 0),
                 numero_documento=request.form.get('numero_documento'),
@@ -67,7 +75,7 @@ def criar():
             if request.form.get('data_pagamento'):
                 lancamento.data_pagamento = datetime.strptime(request.form.get('data_pagamento'), '%Y-%m-%d').date()
                 lancamento.status = 'pago'
-                lancamento.valor_pago = float(request.form.get('valor_real'))
+                lancamento.valor_pago = valor_real
             
             db.session.add(lancamento)
             db.session.commit()
@@ -102,12 +110,20 @@ def editar(id):
     
     if request.method == 'POST':
         try:
+            valor_real_raw = (request.form.get('valor_real') or '').strip()
+            if not valor_real_raw:
+                raise ValueError('Valor Real é obrigatório.')
+
+            valor_real = float(valor_real_raw)
+            if valor_real <= 0:
+                raise ValueError('Valor Real deve ser maior que zero.')
+
             lancamento.data_evento = datetime.strptime(request.form.get('data_evento'), '%Y-%m-%d').date()
             lancamento.data_vencimento = datetime.strptime(request.form.get('data_vencimento'), '%Y-%m-%d').date()
             lancamento.fluxo_conta_id = request.form.get('fluxo_conta_id', type=int)
             lancamento.conta_banco_id = request.form.get('conta_banco_id', type=int)
             lancamento.entidade_id = request.form.get('entidade_id', type=int)
-            lancamento.valor_real = float(request.form.get('valor_real'))
+            lancamento.valor_real = valor_real
             lancamento.valor_imposto = float(request.form.get('valor_imposto') or 0)
             lancamento.valor_outros_custos = float(request.form.get('valor_outros_custos') or 0)
             lancamento.numero_documento = request.form.get('numero_documento')
@@ -117,7 +133,7 @@ def editar(id):
             if request.form.get('data_pagamento'):
                 lancamento.data_pagamento = datetime.strptime(request.form.get('data_pagamento'), '%Y-%m-%d').date()
                 lancamento.status = 'pago'
-                lancamento.valor_pago = float(request.form.get('valor_pago', lancamento.valor_real))
+                lancamento.valor_pago = float(request.form.get('valor_pago') or lancamento.valor_real)
             else:
                 lancamento.data_pagamento = None
                 lancamento.valor_pago = 0.00

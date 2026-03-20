@@ -40,7 +40,7 @@
             <select name="conta_fluxo_id" class="form-control" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
                 <option value="">Todas</option>
                 {% for cf in contas_fluxo %}
-                <option value="{{ cf.id }}" {% if conta_fluxo_id == cf.id %}selected{% endif %}>{{ cf.codigo }}</option>
+                <option value="{{ cf.id }}" {% if conta_fluxo_id == cf.id %}selected{% endif %}>{{ cf.codigo }} - {{ cf.descricao }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -86,7 +86,9 @@
                         <tr>
                             <th>Data</th>
                             <th>Conta Fluxo</th>
-                            <th>Conta Banco</th>
+                            <th>Descrição</th>
+                            <th>Tipo</th>
+                            {# Coluna removida por harmonização #}
                             <th class="text-end">Saldo Anterior</th>
                             <th class="text-end" style="color: #ef4444;">Valor Pago</th>
                             <th class="text-end" style="color: #22c55e;">Valor Recebido</th>
@@ -100,8 +102,10 @@
                             {% set linha_atual = loop.index %}
                             <tr>
                                 <td>{{ l.data_pagamento.strftime('%d/%m/%Y') if l.data_pagamento else '-' }}</td>
-                                <td>{{ l.fluxo_conta.codigo if l.fluxo_conta else 'N/A' }}</td>
-                                <td>{{ l.conta_banco.nome if l.conta_banco else 'N/A' }}</td>
+                                <td>{% if l.fluxo_conta %}{{ l.fluxo_conta.codigo }} - {{ l.fluxo_conta.descricao }}{% else %}N/A{% endif %}</td>
+                                <td>{{ l.observacoes or l.numero_documento or '-' }}</td>
+                                <td>{{ 'Despesa' if l.fluxo_conta and l.fluxo_conta.tipo == 'P' else 'Receita' }}</td>
+                                {# Coluna removida por harmonização #}
                                 <td class="text-end">R$ {{ item.saldo_anterior|brl }}</td>
                                 <td class="text-end" style="color: #ef4444;">
                                     {% if l.fluxo_conta and l.fluxo_conta.tipo == 'P' %}
@@ -121,7 +125,7 @@
                             </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                 Nenhum lançamento realizado
                             </td>
@@ -142,7 +146,9 @@
                         <tr>
                             <th>Data Vencimento</th>
                             <th>Conta Fluxo</th>
-                            <th>Conta Banco</th>
+                            <th>Descrição</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Valor Real</th>
                             <th class="text-end">Saldo Anterior</th>
                             <th class="text-end" style="color: #ef4444;">Valor a Pagar</th>
                             <th class="text-end" style="color: #22c55e;">Valor a Receber</th>
@@ -154,8 +160,10 @@
                         {% set l = item.lancamento %}
                         <tr>
                             <td>{{ l.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ l.fluxo_conta.codigo if l.fluxo_conta else 'N/A' }}</td>
-                            <td>{{ l.conta_banco.nome if l.conta_banco else 'N/A' }}</td>
+                            <td>{% if l.fluxo_conta %}{{ l.fluxo_conta.codigo }} - {{ l.fluxo_conta.descricao }}{% else %}N/A{% endif %}</td>
+                            <td>{{ l.observacoes or l.numero_documento or '-' }}</td>
+                            <td>{{ 'Despesa' if l.fluxo_conta and l.fluxo_conta.tipo == 'P' else 'Receita' }}</td>
+                            <td class="text-end">R$ {{ l.valor_real|brl }}</td>
                             <td class="text-end">R$ {{ item.saldo_anterior|brl }}</td>
                             <td class="text-end" style="color: #ef4444;">
                                 {% if l.fluxo_conta and l.fluxo_conta.tipo == 'P' %}
@@ -175,7 +183,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                 Nenhum lançamento previsto
                             </td>

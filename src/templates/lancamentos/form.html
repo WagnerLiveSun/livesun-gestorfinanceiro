@@ -13,7 +13,7 @@
 </div>
 
 <div class="ls-card p-4">
-    <form method="POST">
+    <form method="POST" id="form-lancamento">
         <!-- Empresa (informativo) -->
         <div class="row mb-3">
             <div class="col-md-3">
@@ -94,13 +94,14 @@
             <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Real *</label>
                 <input type="number" name="valor_real" class="form-control" step="0.01"
-                    value="{{ lancamento.valor_real if lancamento else '0' }}" required style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    min="0.01"
+                    value="{{ lancamento.valor_real if lancamento and lancamento.valor_real != 0 else '' }}" required style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
 
             <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Pago</label>
                 <input type="number" name="valor_pago" class="form-control" step="0.01"
-                    value="{{ lancamento.valor_pago if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    value="{{ lancamento.valor_pago if lancamento and lancamento.valor_pago != 0 else '' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
         </div>
 
@@ -108,13 +109,13 @@
             <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Imposto</label>
                 <input type="number" name="valor_imposto" class="form-control" step="0.01"
-                    value="{{ lancamento.valor_imposto if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    value="{{ lancamento.valor_imposto if lancamento and lancamento.valor_imposto != 0 else '' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
 
             <div class="col-md-3 mb-3">
                 <label class="form-label">Valor Outros Custos</label>
                 <input type="number" name="valor_outros_custos" class="form-control" step="0.01"
-                    value="{{ lancamento.valor_outros_custos if lancamento else '0' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    value="{{ lancamento.valor_outros_custos if lancamento and lancamento.valor_outros_custos != 0 else '' }}" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
             </div>
         </div>
 
@@ -126,7 +127,7 @@
         </div>
 
         <div class="d-flex gap-2">
-            <button type="submit" class="btn ls-btn-primary">
+            <button type="submit" class="btn ls-btn-primary" id="btn-salvar-lancamento">
                 <i class="fas fa-save"></i> Salvar
             </button>
             <a href="{{ url_for('lancamentos.index') }}" class="btn btn-outline-secondary">
@@ -142,4 +143,17 @@
         box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
     }
 </style>
+
+<script>
+(function () {
+    const form = document.getElementById('form-lancamento');
+    const button = document.getElementById('btn-salvar-lancamento');
+    if (!form || !button) return;
+
+    form.addEventListener('submit', function () {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    });
+})();
+</script>
 {% endblock %}
