@@ -18,8 +18,7 @@ except Exception:
 
 
 # Definição do blueprint deve vir logo após os imports principais
-relatorios_bp = Blueprint('relatorios - relatorios.py:21', __name__, url_prefix='/relatorios')
-
+relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
 def _parse_date_filter(value, field_label):
 	if not value:
 		return None
