@@ -18,7 +18,7 @@ except Exception:
 
 
 # Definição do blueprint deve vir logo após os imports principais
-relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
+relatorios_bp = Blueprint('relatorios - relatorios.py:21', __name__, url_prefix='/relatorios')
 
 def _parse_date_filter(value, field_label):
 	if not value:
@@ -31,19 +31,19 @@ def _parse_date_filter(value, field_label):
 
 
 def _build_listagem_lancamentos_context(args):
-		# Calcular saldo inicial total das contas filtradas
-		def get_saldo_inicial_por_conta():
-			if conta_fluxo_id:
-				contas = ContaBanco.query.filter(
-					ContaBanco.empresa_id == current_user.empresa_id,
-					ContaBanco.id == conta_fluxo_id
-				).all()
-			else:
-				contas = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
-			return {c.id: Decimal(str(c.saldo_inicial or 0)) for c in contas}
+	# Calcular saldo inicial total das contas filtradas
+	def get_saldo_inicial_por_conta():
+		if conta_fluxo_id:
+			contas = ContaBanco.query.filter(
+				ContaBanco.empresa_id == current_user.empresa_id,
+				ContaBanco.id == conta_fluxo_id
+			).all()
+		else:
+			contas = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
+		return {c.id: Decimal(str(c.saldo_inicial or 0)) for c in contas}
 
-		def get_saldo_inicial_total():
-			return sum(get_saldo_inicial_por_conta().values(), Decimal('0.00'))
+	def get_saldo_inicial_total():
+		return sum(get_saldo_inicial_por_conta().values(), Decimal('0.00'))
 
 	data_lanc_de = args.get('data_lanc_de', '')
 	data_lanc_ate = args.get('data_lanc_ate', '')
@@ -110,41 +110,6 @@ def _build_listagem_lancamentos_context(args):
 		ativo=True
 	).order_by(FluxoContaModel.codigo.asc()).all()
 
-	saldo_inicial = get_saldo_inicial_total()
-	return {
-		'lancamentos': lancamentos,
-		'entidades': entidades,
-		'contas_fluxo': contas_fluxo,
-		'total_valor_real': total_valor_real,
-		'total_valor_pago': total_valor_pago,
-		'total_valor_imposto': total_valor_imposto,
-		'total_valor_outros_custos': total_valor_outros_custos,
-		'saldo_inicial': saldo_inicial,
-		'empresa_nome': (current_user.empresa.nome if current_user.empresa else '-'),
-		'empresa_cnpj': (current_user.empresa.cnpj if current_user.empresa else '-'),
-		'data_lanc_de': data_lanc_de,
-		'data_lanc_ate': data_lanc_ate,
-		'data_venc_de': data_venc_de,
-		'data_venc_ate': data_venc_ate,
-		'tipo_movimento': tipo_movimento,
-		'entidade_tipo': entidade_tipo,
-		'entidade_id': entidade_id,
-		'conta_fluxo_id': conta_fluxo_id,
-		'status': status,
-		'gerado_em': datetime.now().strftime('%d/%m/%Y %H:%M')
-	}
-
-import io
-from collections import defaultdict
-from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
-from datetime import datetime
-from flask_login import login_required, current_user
-from src.models import db, Lancamento, Entidade, ContaBanco, FluxoContaModel
-from sqlalchemy import func, or_
-from datetime import datetime, date
-from decimal import Decimal
-from types import SimpleNamespace
-import logging
 	return {
 		'lancamentos': lancamentos,
 		'entidades': entidades,
@@ -166,14 +131,6 @@ import logging
 		'status': status,
 		'gerado_em': datetime.now().strftime('%d/%m/%Y %H:%M')
 	}
-import logging
-try:
-	from openpyxl import Workbook
-except Exception:
-	Workbook = None
-	logging.getLogger(__name__).warning("openpyxl not available; Excel exports disabled", exc_info=True)
-
-
 
 # --- LISTAGEM DE LANÇAMENTOS ---
 @relatorios_bp.route('/lancamentos', methods=['GET'])
