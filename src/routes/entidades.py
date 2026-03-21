@@ -87,7 +87,7 @@ def criar():
                 ativo=request.form.get('ativo') == 'on',
                 # Campos de comissão (CLIENTE)
                 aliquota_comissao_especifica=request.form.get('aliquota_comissao_especifica') or None,
-                percentual_repasse=request.form.get('percentual_repasse') or 0,
+                valor_repasse=request.form.get('valor_repasse') or 0,
                 entidade_vendedor_padrao_id=request.form.get('entidade_vendedor_padrao_id') or None
             )
             
@@ -155,7 +155,7 @@ def editar(id):
             # Campos de comissão (CLIENTE)
             aliquota = request.form.get('aliquota_comissao_especifica')
             entidade.aliquota_comissao_especifica = aliquota if aliquota else None
-            entidade.percentual_repasse = request.form.get('percentual_repasse') or 0
+            entidade.valor_repasse = request.form.get('valor_repasse') or 0
             vendedor_id = request.form.get('entidade_vendedor_padrao_id')
             entidade.entidade_vendedor_padrao_id = vendedor_id if vendedor_id else None
             

@@ -47,7 +47,7 @@ ADD COLUMN valor_outros_custos DECIMAL(15, 2) DEFAULT 0.00;
 -- Adicionar campos a entidades
 ALTER TABLE entidades 
 ADD COLUMN aliquota_comissao_especifica DECIMAL(5, 2),
-ADD COLUMN percentual_repasse DECIMAL(5, 2) DEFAULT 0.00,
+ADD COLUMN valor_repasse DECIMAL(10, 2) DEFAULT 0.00,
 ADD COLUMN entidade_vendedor_padrao_id INT;
 
 -- Adicionar FK (se necessário)
@@ -202,7 +202,7 @@ Exemplo:
 vl_nota = 1000.00
 vl_imposto = 100.00
 vl_outros_custos = 50.00
-percentual_repasse = 5% → vl_repasse = 50.00
+valor_repasse = 50.00
 vl_liquido = 1000 - 100 - 50 - 50 = 800.00
 ```
 

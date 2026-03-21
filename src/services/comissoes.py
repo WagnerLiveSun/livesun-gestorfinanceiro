@@ -55,7 +55,7 @@ class ServicoComissoes:
         vl_nota = Decimal(str(lancamento.valor_real or 0))
         vl_imposto = Decimal(str(lancamento.valor_imposto or 0))
         vl_outros_custos = Decimal(str(lancamento.valor_outros_custos or 0))
-        vl_repasse = Decimal(str(entidade_cliente.percentual_repasse or 0)) * vl_nota / Decimal('100')
+        vl_repasse = Decimal(str(entidade_cliente.valor_repasse or 0))
         
         vl_liquido = vl_nota - vl_imposto - vl_outros_custos - vl_repasse
         
@@ -225,8 +225,7 @@ class ServicoComissoes:
                 vl_comissao = ServicoComissoes.calcular_comissao(vl_liquido, aliquota)
                 
                 # Calcular valor de repasse
-                vl_repasse = (Decimal(str(lancamento.entidade.percentual_repasse or 0)) * 
-                            Decimal(str(lancamento.valor_real)) / Decimal('100'))
+                vl_repasse = Decimal(str(lancamento.entidade.valor_repasse or 0))
                 
                 # Criar registro de comissão
                 comissao = Comissao(

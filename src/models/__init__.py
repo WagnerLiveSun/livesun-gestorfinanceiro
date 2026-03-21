@@ -82,7 +82,7 @@ class Entidade(db.Model):
     
     # Campos para comissão (aplicável apenas a CLIENTE)
     aliquota_comissao_especifica = db.Column(db.Numeric(5, 2), nullable=True)  # Percentual específico
-    percentual_repasse = db.Column(db.Numeric(5, 2), default=0.00)  # Percentual de repasse ao fornecedor
+    valor_repasse = db.Column(db.Numeric(10, 2), default=0.00)  # Valor fixo de repasse ao fornecedor
     entidade_vendedor_padrao_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True)  # Vendedor padrão
     
     # Metadados

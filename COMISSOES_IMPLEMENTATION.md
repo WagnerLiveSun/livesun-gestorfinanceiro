@@ -21,7 +21,7 @@ Desenvolvedor: GitHub Copilot
 
 ### 3. Campos de Entidade (CLIENTE)
 - ✅ `aliquota_comissao_especifica` - Percentual específico por cliente
-- ✅ `percentual_repasse` - Percentual de repasse ao fornecedor
+- ✅ `valor_repasse` - Valor fixo de repasse ao fornecedor
 - ✅ `entidade_vendedor_padrao_id` - Vendor padrão vinculado
 - ✅ UI totalmente integrada em `/entidades/form.html`
 
@@ -63,7 +63,7 @@ Desenvolvedor: GitHub Copilot
 src/models/__init__.py
 ├── Entidade (estendido)
 │   ├── aliquota_comissao_especifica
-│   ├── percentual_repasse
+│   ├── valor_repasse
 │   └── entidade_vendedor_padrao_id
 ├── Lancamento (estendido)
 │   ├── valor_imposto
@@ -132,7 +132,7 @@ src/routes/entidades.py
 src/templates/entidades/form.html
 ├── Seção de comissão (condicional)
 ├── Campo aliquota_comissao_especifica
-├── Campo percentual_repasse
+├── Campo valor_repasse
 ├── Campo entidade_vendedor_padrao_id
 └── JavaScript para mostrar/ocultar seção
 ```

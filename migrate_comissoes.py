@@ -65,11 +65,11 @@ def run_migrations():
                 print("  ALTER TABLE entidades ADD COLUMN aliquota_comissao_especifica DECIMAL(5,2);")
             
             try:
-                cursor.execute("SELECT percentual_repasse FROM entidades LIMIT 1")
-                print("✓ Campo 'percentual_repasse' em entidades já existe")
+                cursor.execute("SELECT valor_repasse FROM entidades LIMIT 1")
+                print("✓ Campo 'valor_repasse' em entidades já existe")
             except Exception as e:
-                print("⚠ Campo 'percentual_repasse' pode precisar ser criado:")
-                print("  ALTER TABLE entidades ADD COLUMN percentual_repasse DECIMAL(5,2) DEFAULT 0.00;")
+                print("⚠ Campo 'valor_repasse' pode precisar ser criado:")
+                print("  ALTER TABLE entidades ADD COLUMN valor_repasse DECIMAL(10,2) DEFAULT 0.00;")
             
             try:
                 cursor.execute("SELECT entidade_vendedor_padrao_id FROM entidades LIMIT 1")

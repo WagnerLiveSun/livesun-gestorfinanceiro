@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS entidades (
     email VARCHAR(120),
     contrato_produto TEXT,
     aliquota_comissao_especifica DECIMAL(5, 2),
-    percentual_repasse DECIMAL(5, 2) DEFAULT 0.00,
+    valor_repasse DECIMAL(10, 2) DEFAULT 0.00,
     entidade_vendedor_padrao_id INT,
     ativo BOOLEAN DEFAULT TRUE,
     criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,

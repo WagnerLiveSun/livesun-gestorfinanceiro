@@ -149,7 +149,7 @@ def setup_database(app, init_only=False):
                         nome='Cliente Padrão',
                         email='cliente@example.com',
                         aliquota_comissao_especifica=None,
-                        percentual_repasse=5.00,
+                        valor_repasse=0.00,
                         entidade_vendedor_padrao_id=vendedor.id,
                         ativo=True
                     )

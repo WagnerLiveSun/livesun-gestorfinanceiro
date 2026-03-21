@@ -17,8 +17,8 @@
 -- Adicionar campos de comissão (se não existirem)
 -- ALTER TABLE entidades 
 -- ADD COLUMN aliquota_comissao_especifica DECIMAL(5, 2) AFTER contrato_produto,
--- ADD COLUMN percentual_repasse DECIMAL(5, 2) DEFAULT 0.00 AFTER aliquota_comissao_especifica,
--- ADD COLUMN entidade_vendedor_padrao_id INT AFTER percentual_repasse;
+-- ADD COLUMN valor_repasse DECIMAL(10, 2) DEFAULT 0.00 AFTER aliquota_comissao_especifica,
+-- ADD COLUMN entidade_vendedor_padrao_id INT AFTER valor_repasse;
 
 -- Criar índice e chave estrangeira para vendedor padrão
 -- ALTER TABLE entidades 
