@@ -268,30 +268,22 @@
     </div>
 
     <div class="row g-2 mb-3">
+        {% if mostrar_pago %}
         <div class="col-md-3">
             <div class="rounded p-2 rel-lanc-total-card">
-                <small class="d-block rel-lanc-total-label">Total valor real</small>
-                <strong class="rel-lanc-total-value">R$ {{ total_valor_real|brl }}</strong>
+                <small class="d-block rel-lanc-total-label">Total Pago</small>
+                <strong class="rel-lanc-total-value">R$ {{ total_pago|brl }}</strong>
             </div>
         </div>
+        {% endif %}
+        {% if mostrar_recebido %}
         <div class="col-md-3">
             <div class="rounded p-2 rel-lanc-total-card">
-                <small class="d-block rel-lanc-total-label">Total pago/recebido</small>
-                <strong class="rel-lanc-total-value">R$ {{ total_valor_pago|brl }}</strong>
+                <small class="d-block rel-lanc-total-label">Total Recebido</small>
+                <strong class="rel-lanc-total-value">R$ {{ total_recebido|brl }}</strong>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="rounded p-2 rel-lanc-total-card">
-                <small class="d-block rel-lanc-total-label">Total impostos</small>
-                <strong class="rel-lanc-total-value">R$ {{ total_valor_imposto|brl }}</strong>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="rounded p-2 rel-lanc-total-card">
-                <small class="d-block rel-lanc-total-label">Total outros custos</small>
-                <strong class="rel-lanc-total-value">R$ {{ total_valor_outros_custos|brl }}</strong>
-            </div>
-        </div>
+        {% endif %}
     </div>
 
     <div class="table-responsive bg-white rounded border">

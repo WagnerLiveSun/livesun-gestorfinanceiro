@@ -31,6 +31,20 @@ def _parse_date_filter(value, field_label):
 
 
 def _build_listagem_lancamentos_context(args):
+		# Calcular saldo inicial total das contas filtradas
+		def get_saldo_inicial_por_conta():
+			if conta_fluxo_id:
+				contas = ContaBanco.query.filter(
+					ContaBanco.empresa_id == current_user.empresa_id,
+					ContaBanco.id == conta_fluxo_id
+				).all()
+			else:
+				contas = ContaBanco.query.filter_by(empresa_id=current_user.empresa_id, ativo=True).all()
+			return {c.id: Decimal(str(c.saldo_inicial or 0)) for c in contas}
+
+		def get_saldo_inicial_total():
+			return sum(get_saldo_inicial_por_conta().values(), Decimal('0.00'))
+
 	data_lanc_de = args.get('data_lanc_de', '')
 	data_lanc_ate = args.get('data_lanc_ate', '')
 	data_venc_de = args.get('data_venc_de', '')
@@ -73,18 +87,19 @@ def _build_listagem_lancamentos_context(args):
 		Lancamento.id.desc()
 	).all()
 
-	total_valor_real = Decimal('0.00')
-	total_valor_pago = Decimal('0.00')
-	total_valor_imposto = Decimal('0.00')
-	total_valor_outros_custos = Decimal('0.00')
-
+	total_pago = Decimal('0.00')
+	total_recebido = Decimal('0.00')
 	for lancamento in lancamentos:
 		tipo = lancamento.fluxo_conta.tipo if lancamento.fluxo_conta else None
-		sinal = Decimal('-1') if tipo == 'P' else Decimal('1')
-		total_valor_real += sinal * Decimal(str(lancamento.valor_real or 0))
-		total_valor_pago += sinal * Decimal(str(lancamento.valor_pago or 0))
-		total_valor_imposto += sinal * Decimal(str(lancamento.valor_imposto or 0))
-		total_valor_outros_custos += sinal * Decimal(str(lancamento.valor_outros_custos or 0))
+		valor = Decimal(str(lancamento.valor_pago if lancamento.valor_pago else lancamento.valor_real or 0))
+		if tipo == 'P':
+			total_pago += valor
+		elif tipo == 'R':
+			total_recebido += valor
+
+	# Filtros: se entidade_tipo == 'C' (cliente), só mostra recebidos; se 'F' (fornecedor), só pagos
+	mostrar_pago = entidade_tipo != 'C'
+	mostrar_recebido = entidade_tipo != 'F'
 
 	entidades = Entidade.query.filter_by(
 		empresa_id=current_user.empresa_id,
@@ -95,6 +110,7 @@ def _build_listagem_lancamentos_context(args):
 		ativo=True
 	).order_by(FluxoContaModel.codigo.asc()).all()
 
+	saldo_inicial = get_saldo_inicial_total()
 	return {
 		'lancamentos': lancamentos,
 		'entidades': entidades,
@@ -103,6 +119,7 @@ def _build_listagem_lancamentos_context(args):
 		'total_valor_pago': total_valor_pago,
 		'total_valor_imposto': total_valor_imposto,
 		'total_valor_outros_custos': total_valor_outros_custos,
+		'saldo_inicial': saldo_inicial,
 		'empresa_nome': (current_user.empresa.nome if current_user.empresa else '-'),
 		'empresa_cnpj': (current_user.empresa.cnpj if current_user.empresa else '-'),
 		'data_lanc_de': data_lanc_de,
@@ -128,24 +145,27 @@ from datetime import datetime, date
 from decimal import Decimal
 from types import SimpleNamespace
 import logging
-try:
-    from openpyxl import Workbook
-except Exception:
-    Workbook = None
-    logging.getLogger(__name__).warning("openpyxl not available; Excel exports disabled", exc_info=True)
-
-
-
-import io
-from collections import defaultdict
-from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
-from datetime import datetime
-from flask_login import login_required, current_user
-from src.models import db, Lancamento, Entidade, ContaBanco, FluxoContaModel
-from sqlalchemy import func, or_
-from datetime import datetime, date
-from decimal import Decimal
-from types import SimpleNamespace
+	return {
+		'lancamentos': lancamentos,
+		'entidades': entidades,
+		'contas_fluxo': contas_fluxo,
+		'total_pago': total_pago,
+		'total_recebido': total_recebido,
+		'mostrar_pago': mostrar_pago,
+		'mostrar_recebido': mostrar_recebido,
+		'empresa_nome': (current_user.empresa.nome if current_user.empresa else '-'),
+		'empresa_cnpj': (current_user.empresa.cnpj if current_user.empresa else '-'),
+		'data_lanc_de': data_lanc_de,
+		'data_lanc_ate': data_lanc_ate,
+		'data_venc_de': data_venc_de,
+		'data_venc_ate': data_venc_ate,
+		'tipo_movimento': tipo_movimento,
+		'entidade_tipo': entidade_tipo,
+		'entidade_id': entidade_id,
+		'conta_fluxo_id': conta_fluxo_id,
+		'status': status,
+		'gerado_em': datetime.now().strftime('%d/%m/%Y %H:%M')
+	}
 import logging
 try:
 	from openpyxl import Workbook
