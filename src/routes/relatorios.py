@@ -79,10 +79,12 @@ def _build_listagem_lancamentos_context(args):
 	total_valor_outros_custos = Decimal('0.00')
 
 	for lancamento in lancamentos:
-		total_valor_real += Decimal(str(lancamento.valor_real or 0))
-		total_valor_pago += Decimal(str(lancamento.valor_pago or 0))
-		total_valor_imposto += Decimal(str(lancamento.valor_imposto or 0))
-		total_valor_outros_custos += Decimal(str(lancamento.valor_outros_custos or 0))
+		tipo = lancamento.fluxo_conta.tipo if lancamento.fluxo_conta else None
+		sinal = Decimal('-1') if tipo == 'P' else Decimal('1')
+		total_valor_real += sinal * Decimal(str(lancamento.valor_real or 0))
+		total_valor_pago += sinal * Decimal(str(lancamento.valor_pago or 0))
+		total_valor_imposto += sinal * Decimal(str(lancamento.valor_imposto or 0))
+		total_valor_outros_custos += sinal * Decimal(str(lancamento.valor_outros_custos or 0))
 
 	entidades = Entidade.query.filter_by(
 		empresa_id=current_user.empresa_id,
