@@ -87,12 +87,21 @@
         </div>
 
         <div class="row">
-            <div class="col-12 mb-4">
+            <div class="col-md-6 mb-4">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="ativo" name="ativo"
                         {% if not conta or conta.ativo %}checked{% endif %}>
                     <label class="form-check-label" for="ativo">
                         Conta Ativa
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_principal" name="is_principal"
+                        {% if conta and conta.is_principal %}checked{% endif %}>
+                    <label class="form-check-label" for="is_principal">
+                        Conta Principal
                     </label>
                 </div>
             </div>

@@ -1,11 +1,69 @@
 
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 db = SQLAlchemy()
+
+# Modelo de Entidade (restaurado)
+class Entidade(db.Model):
+    __tablename__ = 'entidades'
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
+    empresa = db.relationship('Empresa', backref='entidades')
+    nome = db.Column(db.String(150), nullable=False)
+    cnpj_cpf = db.Column(db.String(18), nullable=False, index=True)
+
+    tipo = db.Column(db.String(1))
+    fluxo_conta_id = db.Column(db.Integer, db.ForeignKey('fluxo_contas_modelo.id'), nullable=True)
+    fluxo_conta = db.relationship('FluxoContaModel', foreign_keys=[fluxo_conta_id])
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ativo = db.Column(db.Boolean, default=True)
+
+    def get_tipo_descricao(self):
+        """Retorna a descrição do tipo da entidade (C=Cliente, F=Fornecedor, V=Funcionário, etc)."""
+        if self.tipo == 'C':
+            return 'Cliente'
+        elif self.tipo == 'F':
+            return 'Fornecedor'
+        elif self.tipo == 'V':
+            return 'Funcionário'
+        elif self.tipo:
+            return self.tipo
+        return 'Não definido'
+
+    def __repr__(self):
+        return f'<Entidade {self.nome}>'
+
+# Modelo de Usuário para autenticação
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    __table_args__ = (
+        db.UniqueConstraint('empresa_id', 'username', name='uq_users_empresa_username'),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
+    empresa = db.relationship('Empresa', backref='users')
+    username = db.Column(db.String(80), nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    full_name = db.Column(db.String(120))
+    is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    dashboard_chart_days = db.Column(db.Integer, default=30)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 # Modelo Empresa para multi-tenant
 class Empresa(db.Model):
@@ -19,51 +77,81 @@ class Empresa(db.Model):
     def __repr__(self):
         return f'<Empresa {self.nome}>'
 
-class User(UserMixin, db.Model):
-    """User model for authentication"""
-    __tablename__ = 'users'
+class Comissao(db.Model):
+    """Commission Records - Registro de Comissões"""
+    __tablename__ = 'comissoes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
+    empresa = db.relationship('Empresa', backref='comissoes')
+    
+    # Identificação de apuração
+    id_apuracao = db.Column(db.Integer, nullable=False, index=True)  # Sequence da apuração
+    # Relacionamentos
+    lancamento_id = db.Column(db.Integer, db.ForeignKey('lancamentos.id'), nullable=False, index=True)
+    lancamento = db.relationship('Lancamento', foreign_keys=[lancamento_id])
+    
+    entidade_cliente_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
+    entidade_vendedor_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
+    
+    # Datas
+    dt_lancamento = db.Column(db.Date, nullable=False, index=True)
+    dt_vencimento = db.Column(db.Date, nullable=False, index=True)
+    dt_pagamento_recebimento = db.Column(db.Date, nullable=False, index=True)  # data_pagamento do lancamento
+    
+    # Valores
+    vl_nota = db.Column(db.Numeric(15, 2), nullable=False)  # valor_real
+    vl_imposto = db.Column(db.Numeric(15, 2), default=0.00)
+    vl_outros_custos = db.Column(db.Numeric(15, 2), default=0.00)
+    vl_repasse = db.Column(db.Numeric(15, 2), default=0.00)  # Valor de repasse
+    vl_liquido = db.Column(db.Numeric(15, 2), nullable=False)  # Base de cálculo
+    aliquota_aplicada = db.Column(db.Numeric(5, 2), nullable=False)  # Percentual aplicado
+    vl_comissao = db.Column(db.Numeric(15, 2), nullable=False)  # Valor da comissão
+    
+    # Situação
+    situacao = db.Column(db.String(20), default='ativo')  # ativo, estornado, reapurado
+    
+    # Metadados
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
     __table_args__ = (
-        db.UniqueConstraint('empresa_id', 'username', name='uq_users_empresa_username'),
+        db.Index('idx_comissao_empresa_apuracao', 'empresa_id', 'id_apuracao'),
+        db.Index('idx_comissao_empresa_lancamento', 'empresa_id', 'lancamento_id', 'entidade_cliente_id', 'entidade_vendedor_id'),
     )
     
-    id = db.Column(db.Integer, primary_key=True)
+    def __repr__(self):
+        return f'<Comissao {self.id} - Apuração {self.id_apuracao} - R$ {self.vl_comissao}>'
+
+# -------------------
+# Importação de NFSe
+# -------------------
+class ImportacaoNFSe(db.Model):
+    __tablename__ = 'importacao_nfse'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
-    empresa = db.relationship('Empresa', backref='users')
-    username = db.Column(db.String(80), nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    full_name = db.Column(db.String(120))
-    is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)
-    dashboard_chart_days = db.Column(db.Integer, default=30)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def set_password(self, password):
-        """Set password hash"""
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password):
-        """Check password against hash"""
-        return check_password_hash(self.password_hash, password)
+    empresa = db.relationship('Empresa', backref='importacoes_nfse')
+    chave_nota = db.Column(db.String(60), nullable=False, index=True)
+    numero_nota = db.Column(db.String(30), nullable=False)
+    data_emissao = db.Column(db.Date, nullable=False)
+    cnpj_tomador = db.Column(db.String(20), nullable=False)
+    entidade_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True, index=True)
+    entidade = db.relationship('Entidade', foreign_keys=[entidade_id], backref='importacoes_nfse')
+
+    # Relacionamento reverso para facilitar exclusão em cascata
+    lancamento_id = db.Column(db.Integer, db.ForeignKey('lancamentos.id', ondelete='CASCADE'), nullable=True, index=True)
+    lancamento = db.relationship('Lancamento', backref=db.backref('importacao_nfse', cascade='all, delete-orphan', passive_deletes=True), foreign_keys=[lancamento_id])
+    valor_bruto = db.Column(db.Numeric(15, 2), nullable=False)
+    valor_impostos = db.Column(db.Numeric(15, 2))
+    descricao_servico = db.Column(db.String(255))
+    status_importacao = db.Column(db.String(20), default='sucesso')
+    mensagem_erro = db.Column(db.String(255))
+    data_importacao = db.Column(db.DateTime, default=datetime.utcnow)
+    # Armazena o XML original importado
+    # xml_original removido (não armazenar XML no banco)
     
     def __repr__(self):
-        return f'<User {self.username}>'
-
-
-class Entidade(db.Model):
-    """Entity model - Cliente, Fornecedor, Colaborador, Vendedor"""
-    __tablename__ = 'entidades'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
-    empresa = db.relationship('Empresa', backref='entidades')
-    tipo = db.Column(db.String(1), nullable=False)  # C-Cliente, F-Fornecedor, C-Colaborador, V-Vendedor
-    cnpj_cpf = db.Column(db.String(14), unique=True, nullable=False, index=True)
-    inscricao_estadual = db.Column(db.String(20))
-    inscricao_municipal = db.Column(db.String(20))
-    nome = db.Column(db.String(150), nullable=False, index=True)
-    nome_fantasia = db.Column(db.String(150))
+        return f'<ImportacaoNFSe {self.chave_nota} - {self.numero_nota}>'
     
     # Endereço
     endereco_rua = db.Column(db.String(150))
@@ -83,31 +171,17 @@ class Entidade(db.Model):
     # Campos para comissão (aplicável apenas a CLIENTE)
     aliquota_comissao_especifica = db.Column(db.Numeric(5, 2), nullable=True)  # Percentual específico
     valor_repasse = db.Column(db.Numeric(10, 2), default=0.00)  # Valor fixo de repasse ao fornecedor
+
     entidade_vendedor_padrao_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True)  # Vendedor padrão
+    entidade_vendedor_padrao = db.relationship('Entidade', foreign_keys=[entidade_vendedor_padrao_id], backref='importacoes_nfse_vendedor_padrao')
     
     # Metadados
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relacionamentos
-    lancamentos = db.relationship('Lancamento', backref='entidade', lazy='dynamic', foreign_keys='Lancamento.entidade_id')
-    comissoes = db.relationship('Comissao', backref='cliente', lazy='dynamic', foreign_keys='Comissao.entidade_cliente_id')
-    comissoes_vendedor = db.relationship('Comissao', backref='vendedor', lazy='dynamic', foreign_keys='Comissao.entidade_vendedor_id')
-    vendedor_padrao = db.relationship('Entidade', remote_side=[id], foreign_keys=[entidade_vendedor_padrao_id])
-    
-    def __repr__(self):
-        return f'<Entidade {self.nome} ({self.tipo})>'
-    
-    def get_tipo_descricao(self):
-        """Get type description"""
-        tipos = {
-            'C': 'Cliente',
-            'F': 'Fornecedor',
-            'L': 'Colaborador',
-            'V': 'Vendedor'
-        }
-        return tipos.get(self.tipo, self.tipo)
+
+
 
 
 class FluxoContaModel(db.Model):
@@ -153,6 +227,7 @@ class ContaBanco(db.Model):
     fluxo_conta = db.relationship('FluxoContaModel', foreign_keys=[fluxo_conta_id])
     
     saldo_inicial = db.Column(db.Numeric(15, 2), default=0.00)
+    is_principal = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Indica se é a conta principal da entidade
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -181,9 +256,10 @@ class Lancamento(db.Model):
     status = db.Column(db.String(20), nullable=False, default='aberto')  # aberto, pago, vencido
     
     # Relacionamentos
+    entidade_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False)
+    entidade = db.relationship('Entidade', backref='lancamentos')
     fluxo_conta_id = db.Column(db.Integer, db.ForeignKey('fluxo_contas_modelo.id'), nullable=False)
     conta_banco_id = db.Column(db.Integer, db.ForeignKey('contas_banco.id'), nullable=False)
-    entidade_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False)
     
     # Valores
     valor_real = db.Column(db.Numeric(15, 2), nullable=False)  # Valor original
@@ -287,49 +363,3 @@ class ParametroSistema(db.Model):
         return f'<ParametroSistema {self.chave}={self.valor}>'
 
 
-class Comissao(db.Model):
-    """Commission Records - Registro de Comissões"""
-    __tablename__ = 'comissoes'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    empresa_id = db.Column(db.Integer, db.ForeignKey('empresas.id'), nullable=False, index=True)
-    empresa = db.relationship('Empresa', backref='comissoes')
-    
-    # Identificação de apuração
-    id_apuracao = db.Column(db.Integer, nullable=False, index=True)  # Sequence da apuração
-    
-    # Relacionamentos
-    lancamento_id = db.Column(db.Integer, db.ForeignKey('lancamentos.id'), nullable=False, index=True)
-    lancamento = db.relationship('Lancamento', foreign_keys=[lancamento_id])
-    
-    entidade_cliente_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
-    entidade_vendedor_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=False, index=True)
-    
-    # Datas
-    dt_lancamento = db.Column(db.Date, nullable=False, index=True)
-    dt_vencimento = db.Column(db.Date, nullable=False, index=True)
-    dt_pagamento_recebimento = db.Column(db.Date, nullable=False, index=True)  # data_pagamento do lancamento
-    
-    # Valores
-    vl_nota = db.Column(db.Numeric(15, 2), nullable=False)  # valor_real
-    vl_imposto = db.Column(db.Numeric(15, 2), default=0.00)
-    vl_outros_custos = db.Column(db.Numeric(15, 2), default=0.00)
-    vl_repasse = db.Column(db.Numeric(15, 2), default=0.00)  # Valor de repasse
-    vl_liquido = db.Column(db.Numeric(15, 2), nullable=False)  # Base de cálculo
-    aliquota_aplicada = db.Column(db.Numeric(5, 2), nullable=False)  # Percentual aplicado
-    vl_comissao = db.Column(db.Numeric(15, 2), nullable=False)  # Valor da comissão
-    
-    # Situação
-    situacao = db.Column(db.String(20), default='ativo')  # ativo, estornado, reapurado
-    
-    # Metadados
-    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
-    atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    __table_args__ = (
-        db.Index('idx_comissao_empresa_apuracao', 'empresa_id', 'id_apuracao'),
-        db.Index('idx_comissao_empresa_lancamento', 'empresa_id', 'lancamento_id', 'entidade_cliente_id', 'entidade_vendedor_id'),
-    )
-    
-    def __repr__(self):
-        return f'<Comissao {self.id} - Apuração {self.id_apuracao} - R$ {self.vl_comissao}>'

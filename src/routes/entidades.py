@@ -60,54 +60,39 @@ def criar():
     except Exception as e:
         logger.warning(f'Erro ao buscar vendedores: {e}')
     
+    from src.models import FluxoContaModel
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
     if request.method == 'POST':
         try:
-            # Ensure the new entity is associated with the current user's company
-            if not hasattr(current_user, 'empresa_id') or not current_user.empresa_id:
-                flash('Usuário não está associado a uma empresa.', 'danger')
-                return render_template('entidades/form.html', action='criar', vendedores=vendedores)
+            cnpj_cpf = request.form.get('cnpj_cpf')
+            existe = Entidade.query.filter_by(empresa_id=tenant_id(), cnpj_cpf=cnpj_cpf).first()
+            if existe:
+                flash('Já existe uma entidade com este CNPJ/CPF para esta empresa.', 'danger')
+                return render_template('entidades/form.html', action='criar', vendedores=vendedores, entidade=None, contas_fluxo=contas_fluxo)
 
             entidade = Entidade(
                 empresa_id=tenant_id(),
                 tipo=request.form.get('tipo'),
-                cnpj_cpf=request.form.get('cnpj_cpf'),
-                inscricao_estadual=request.form.get('inscricao_estadual'),
-                inscricao_municipal=request.form.get('inscricao_municipal'),
+                cnpj_cpf=cnpj_cpf,
                 nome=request.form.get('nome'),
-                nome_fantasia=request.form.get('nome_fantasia'),
-                endereco_rua=request.form.get('endereco_rua'),
-                endereco_numero=request.form.get('endereco_numero'),
-                endereco_bairro=request.form.get('endereco_bairro'),
-                endereco_cidade=request.form.get('endereco_cidade'),
-                endereco_uf=request.form.get('endereco_uf'),
-                endereco_cep=request.form.get('endereco_cep'),
-                telefone=request.form.get('telefone'),
-                email=request.form.get('email'),
-                contrato_produto=request.form.get('contrato_produto'),
                 ativo=request.form.get('ativo') == 'on',
-                # Campos de comissão (CLIENTE)
-                aliquota_comissao_especifica=request.form.get('aliquota_comissao_especifica') or None,
-                valor_repasse=request.form.get('valor_repasse') or 0,
-                entidade_vendedor_padrao_id=request.form.get('entidade_vendedor_padrao_id') or None
+                fluxo_conta_id=request.form.get('fluxo_conta_id') or None
             )
-            
             db.session.add(entidade)
             db.session.commit()
-            
             flash(f'Entidade {entidade.nome} criada com sucesso', 'success')
             return redirect(url_for('entidades.index'))
-        
         except Exception as e:
             import traceback
             logger.error(f'Erro ao criar entidade: {e}')
             logger.error(traceback.format_exc())
             db.session.rollback()
-            flash('Erro ao criar entidade. Verifique os dados e tente novamente.', 'danger')
+            flash(f'Erro ao criar entidade: {str(e)}', 'danger')
             return render_template('entidades/form.html', action='criar', vendedores=vendedores, entidade=None)
     
     # GET request - just show the form
     logger.info('Renderizando formulário de criação')
-    return render_template('entidades/form.html', action='criar', vendedores=vendedores, entidade=None)
+    return render_template('entidades/form.html', action='criar', vendedores=vendedores, entidade=None, contas_fluxo=contas_fluxo)
 
 
 @entidades_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
@@ -133,6 +118,8 @@ def editar(id):
     except Exception as e:
         logger.warning(f'[EDITAR] Erro ao buscar vendedores: {e}')
     
+    from src.models import FluxoContaModel
+    contas_fluxo = scoped_query(FluxoContaModel).filter_by(ativo=True).all()
     if request.method == 'POST':
         try:
             entidade.tipo = request.form.get('tipo')
@@ -151,6 +138,7 @@ def editar(id):
             entidade.email = request.form.get('email')
             entidade.contrato_produto = request.form.get('contrato_produto')
             entidade.ativo = request.form.get('ativo') == 'on'
+            entidade.fluxo_conta_id = request.form.get('fluxo_conta_id') or None
             
             # Campos de comissão (CLIENTE)
             aliquota = request.form.get('aliquota_comissao_especifica')
@@ -170,11 +158,11 @@ def editar(id):
             logger.error(traceback.format_exc())
             db.session.rollback()
             flash(f'Erro ao atualizar entidade: {str(e)}', 'danger')
-            return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores)
+            return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores, contas_fluxo=contas_fluxo)
     
     # GET request - show form for editing
     logger.info(f'[EDITAR] Renderizando formulário para entidade ID={id}')
-    return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores)
+    return render_template('entidades/form.html', action='editar', entidade=entidade, vendedores=vendedores, contas_fluxo=contas_fluxo)
 
 
 @entidades_bp.route('/<int:id>/ver')

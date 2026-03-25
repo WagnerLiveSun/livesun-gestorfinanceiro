@@ -140,6 +140,18 @@
                 <textarea name="contrato_produto" class="form-control" rows="4" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">{{ entidade.contrato_produto if entidade else '' }}</textarea>
             </div>
         </div>
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label class="form-label">Conta de Fluxo de Caixa Associada</label>
+                <select name="fluxo_conta_id" class="form-control" style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
+                    <option value="">Nenhuma</option>
+                    {% for cf in contas_fluxo %}
+                    <option value="{{ cf.id }}" {% if entidade and entidade.fluxo_conta_id == cf.id %}selected{% endif %}>{{ cf.codigo }} - {{ cf.descricao }}</option>
+                    {% endfor %}
+                </select>
+                <small class="form-text text-muted">Opcional: selecione uma conta de fluxo para associação automática em lançamentos</small>
+            </div>
+        </div>
 
         <!-- Seção de Comissão (apenas para CLIENTE) -->
         <div id="comissao_section" style="display: {% if entidade and entidade.tipo == 'C' %}block{% else %}none{% endif %};">

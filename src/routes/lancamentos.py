@@ -16,17 +16,18 @@ def index():
     status = request.args.get('status', '')
     tipo = request.args.get('tipo', '')  # P para Pagamento, R para Recebimento
     
-    query = scoped_query(Lancamento)
-    
+    # Join explícito com Entidade para garantir acesso ao nome e tipo
+    query = scoped_query(Lancamento).join(Entidade, isouter=True)
+
     if status:
         query = query.filter_by(status=status)
-    
+
     if tipo:
         query = query.join(FluxoContaModel).filter(FluxoContaModel.tipo == tipo)
-    
+
     pagination = query.order_by(Lancamento.data_vencimento.desc()).paginate(page=page, per_page=20)
     lancamentos = pagination.items
-    
+
     return render_template(
         'lancamentos/index.html',
         lancamentos=lancamentos,

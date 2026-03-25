@@ -59,7 +59,8 @@ def _build_listagem_lancamentos_context(args):
 	data_venc_de_dt = _parse_date_filter(data_venc_de, 'Data de vencimento (de)')
 	data_venc_ate_dt = _parse_date_filter(data_venc_ate, 'Data de vencimento (até)')
 
-	query = Lancamento.query.filter(Lancamento.empresa_id == current_user.empresa_id)
+	from sqlalchemy.orm import joinedload
+	query = Lancamento.query.filter(Lancamento.empresa_id == current_user.empresa_id).options(joinedload(Lancamento.entidade))
 
 	if data_lanc_de_dt:
 		query = query.filter(Lancamento.data_evento >= data_lanc_de_dt)

@@ -36,6 +36,7 @@ def criar():
                 flash('Usuário não está associado a uma empresa.', 'danger')
                 return redirect(url_for('contas_banco.criar'))
 
+            is_principal = request.form.get('is_principal') == 'on'
             conta = ContaBanco(
                 empresa_id=tenant_id(),
                 nome=request.form.get('nome'),
@@ -46,9 +47,17 @@ def criar():
                 tipo=request.form.get('tipo'),
                 fluxo_conta_id=request.form.get('fluxo_conta_id', type=int),
                 saldo_inicial=request.form.get('saldo_inicial', type=float),
-                ativo=request.form.get('ativo') == 'on'
+                ativo=request.form.get('ativo') == 'on',
+                is_principal=is_principal
             )
-            
+            if is_principal:
+                # Desmarcar outras contas principais da mesma empresa
+                ContaBanco.query.filter_by(empresa_id=conta.empresa_id, is_principal=True).update({'is_principal': False})
+            else:
+                # Se for a única conta da empresa, torna principal
+                total_contas = ContaBanco.query.filter_by(empresa_id=conta.empresa_id).count()
+                if total_contas == 0:
+                    conta.is_principal = True
             db.session.add(conta)
             db.session.commit()
             
@@ -87,7 +96,18 @@ def editar(id):
             conta.fluxo_conta_id = request.form.get('fluxo_conta_id', type=int)
             conta.saldo_inicial = request.form.get('saldo_inicial', type=float)
             conta.ativo = request.form.get('ativo') == 'on'
-            
+            is_principal = request.form.get('is_principal') == 'on'
+            if is_principal:
+                # Desmarcar outras contas principais da mesma empresa
+                ContaBanco.query.filter(ContaBanco.empresa_id==conta.empresa_id, ContaBanco.id!=conta.id, ContaBanco.is_principal==True).update({'is_principal': False})
+                conta.is_principal = True
+            else:
+                # Se for a única conta da empresa, mantém principal
+                total_contas = ContaBanco.query.filter_by(empresa_id=conta.empresa_id).count()
+                if total_contas == 1:
+                    conta.is_principal = True
+                else:
+                    conta.is_principal = False
             db.session.commit()
             
             flash(f'Conta bancária {conta.nome} atualizada com sucesso', 'success')

@@ -4,7 +4,9 @@ from . import dashboard
 from . import entidades
 from . import fluxo
 from . import contas_banco
+
 from . import lancamentos
+from . import importacoes
 
 __all__ = [
     'auth',
@@ -13,4 +15,5 @@ __all__ = [
     'fluxo',
     'contas_banco',
     'lancamentos',
+    'importacoes',
 ]
