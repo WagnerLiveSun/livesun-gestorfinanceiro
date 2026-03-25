@@ -1,15 +1,256 @@
-# Imports principais
+
+
 import io
 from collections import defaultdict
 from flask import Blueprint, render_template, request, jsonify, send_file, flash, redirect, url_for
 from datetime import datetime
 from flask_login import login_required, current_user
-from src.models import db, Lancamento, Entidade, ContaBanco, FluxoContaModel
+from src.models import db, Lancamento, Entidade, ContaBanco, FluxoContaModel, ImportacaoNFSe
+from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
-from datetime import datetime, date
 from decimal import Decimal
-from types import SimpleNamespace
 import logging
+try:
+	from openpyxl import Workbook
+except Exception:
+	Workbook = None
+	logging.getLogger(__name__).warning("openpyxl not available; Excel exports disabled", exc_info=True)
+
+relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
+
+# --- LISTAGEM DE NOTAS EMITIDAS (NFSe) ---
+@relatorios_bp.route('/notas_nfse', methods=['GET'])
+@login_required
+def listagem_notas_nfse():
+	nome_cliente = request.args.get('nome_cliente', '').strip()
+	data_emissao_de = request.args.get('data_emissao_de', '')
+	data_emissao_ate = request.args.get('data_emissao_ate', '')
+	data_venc_de = request.args.get('data_venc_de', '')
+	data_venc_ate = request.args.get('data_venc_ate', '')
+	status = request.args.get('status', '')
+
+	query = ImportacaoNFSe.query.filter(ImportacaoNFSe.empresa_id == current_user.empresa_id)
+	query = query.options(joinedload(ImportacaoNFSe.entidade), joinedload(ImportacaoNFSe.lancamento))
+
+	if nome_cliente:
+		query = query.join(Entidade, ImportacaoNFSe.entidade).filter(Entidade.nome.ilike(f"%{nome_cliente}%"))
+	if data_emissao_de:
+		try:
+			data_emissao_de_dt = datetime.strptime(data_emissao_de, '%Y-%m-%d').date()
+			query = query.filter(ImportacaoNFSe.data_emissao >= data_emissao_de_dt)
+		except Exception:
+			flash('Data de emissão (de) inválida.', 'warning')
+	if data_emissao_ate:
+		try:
+			data_emissao_ate_dt = datetime.strptime(data_emissao_ate, '%Y-%m-%d').date()
+			query = query.filter(ImportacaoNFSe.data_emissao <= data_emissao_ate_dt)
+		except Exception:
+			flash('Data de emissão (até) inválida.', 'warning')
+	if data_venc_de:
+		try:
+			data_venc_de_dt = datetime.strptime(data_venc_de, '%Y-%m-%d').date()
+			query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.data_vencimento >= data_venc_de_dt)
+		except Exception:
+			flash('Data de vencimento (de) inválida.', 'warning')
+	if data_venc_ate:
+		try:
+			data_venc_ate_dt = datetime.strptime(data_venc_ate, '%Y-%m-%d').date()
+			query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.data_vencimento <= data_venc_ate_dt)
+		except Exception:
+			flash('Data de vencimento (até) inválida.', 'warning')
+	if status:
+		query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.status == status)
+
+	notas = query.order_by(ImportacaoNFSe.data_emissao.desc(), ImportacaoNFSe.id.desc()).all()
+
+	total_valor_bruto = sum([float(n.valor_bruto or 0) for n in notas])
+	# Valor de imposto: prioriza valor_imposto do lançamento, senão valor_impostos da nota
+	total_valor_impostos = sum([
+		float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+		for n in notas
+	])
+
+	return render_template(
+		'relatorios/listagem_notas_nfse.html',
+		notas=notas,
+		total_valor_bruto=total_valor_bruto,
+		total_valor_impostos=total_valor_impostos,
+		nome_cliente=nome_cliente,
+		data_emissao_de=data_emissao_de,
+		data_emissao_ate=data_emissao_ate,
+		data_venc_de=data_venc_de,
+		data_venc_ate=data_venc_ate,
+		status=status,
+		empresa_nome=(current_user.empresa.nome if current_user.empresa else '-'),
+		empresa_cnpj=(current_user.empresa.cnpj if current_user.empresa else '-'),
+		gerado_em=datetime.now().strftime('%d/%m/%Y %H:%M'),
+		get_valor_imposto=lambda n: float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+	)
+
+
+# Exportação Excel/PDF
+@relatorios_bp.route('/notas_nfse/export', methods=['GET'])
+@login_required
+def export_listagem_notas_nfse():
+	formato = request.args.get('formato', 'xlsx').lower()
+	# Reutiliza a lógica de filtro
+	nome_cliente = request.args.get('nome_cliente', '').strip()
+	data_emissao_de = request.args.get('data_emissao_de', '')
+	data_emissao_ate = request.args.get('data_emissao_ate', '')
+	data_venc_de = request.args.get('data_venc_de', '')
+	data_venc_ate = request.args.get('data_venc_ate', '')
+	status = request.args.get('status', '')
+
+	query = ImportacaoNFSe.query.filter(ImportacaoNFSe.empresa_id == current_user.empresa_id)
+	query = query.options(joinedload(ImportacaoNFSe.entidade), joinedload(ImportacaoNFSe.lancamento))
+	if nome_cliente:
+		query = query.join(Entidade, ImportacaoNFSe.entidade).filter(Entidade.nome.ilike(f"%{nome_cliente}%"))
+	if data_emissao_de:
+		try:
+			data_emissao_de_dt = datetime.strptime(data_emissao_de, '%Y-%m-%d').date()
+			query = query.filter(ImportacaoNFSe.data_emissao >= data_emissao_de_dt)
+		except Exception:
+			pass
+	if data_emissao_ate:
+		try:
+			data_emissao_ate_dt = datetime.strptime(data_emissao_ate, '%Y-%m-%d').date()
+			query = query.filter(ImportacaoNFSe.data_emissao <= data_emissao_ate_dt)
+		except Exception:
+			pass
+	if data_venc_de:
+		try:
+			data_venc_de_dt = datetime.strptime(data_venc_de, '%Y-%m-%d').date()
+			query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.data_vencimento >= data_venc_de_dt)
+		except Exception:
+			pass
+	if data_venc_ate:
+		try:
+			data_venc_ate_dt = datetime.strptime(data_venc_ate, '%Y-%m-%d').date()
+			query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.data_vencimento <= data_venc_ate_dt)
+		except Exception:
+			pass
+	if status:
+		query = query.join(Lancamento, ImportacaoNFSe.lancamento).filter(Lancamento.status == status)
+
+	notas = query.order_by(ImportacaoNFSe.data_emissao.desc(), ImportacaoNFSe.id.desc()).all()
+
+	if formato == 'xlsx':
+		if Workbook is None:
+			flash('Exportação para Excel indisponível: biblioteca "openpyxl" não está instalada no ambiente.', 'warning')
+			return redirect(url_for('relatorios.listagem_notas_nfse', **request.args))
+		wb = Workbook()
+		ws = wb.active
+		ws.title = 'Notas NFSe'
+		ws.append(['Empresa', current_user.empresa.nome if current_user.empresa else '-'])
+		ws.append(['CNPJ', current_user.empresa.cnpj if current_user.empresa else '-'])
+		ws.append(['Gerado em', datetime.now().strftime('%d/%m/%Y %H:%M')])
+		ws.append([])
+		ws.append([
+			'ID', 'Empresa ID', 'Número Nota', 'Data Emissão', 'CNPJ Tomador',
+			'Cliente', 'Valor Bruto', 'Alíquota ISS', 'Valor Impostos', 'Status', 'Data Vencimento', 'Data Pagamento', 'Descrição Serviço'
+		])
+		for n in notas:
+			valor_imposto = float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+			ws.append([
+				n.id,
+				n.empresa_id,
+				n.numero_nota,
+				n.data_emissao.strftime('%d/%m/%Y') if n.data_emissao else '',
+				n.cnpj_tomador,
+				n.entidade.nome if n.entidade else '',
+				float(n.valor_bruto or 0),
+				float(n.aliquota_comissao_especifica or 0),
+				valor_imposto,
+				n.lancamento.status if n.lancamento else '',
+				n.lancamento.data_vencimento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_vencimento else '',
+				n.lancamento.data_pagamento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_pagamento else '',
+				n.descricao_servico or ''
+			])
+		ws.append([])
+		ws.append([
+			'TOTAL', '', '', '', '', '',
+			float(sum([float(n.valor_bruto or 0) for n in notas])), '',
+			float(sum([
+				float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+				for n in notas
+			])), '', '', '', ''
+		])
+		output = io.BytesIO()
+		wb.save(output)
+		output.seek(0)
+		return send_file(
+			output,
+			as_attachment=True,
+			download_name='listagem_notas_nfse.xlsx',
+			mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+		)
+	if formato == 'pdf':
+		try:
+			from fpdf import FPDF
+		except ImportError:
+			flash('Exportação para PDF indisponível: biblioteca "fpdf" não está instalada no ambiente.', 'warning')
+			return redirect(url_for('relatorios.listagem_notas_nfse', **request.args))
+		pdf = FPDF(orientation='L', unit='mm', format='A4')
+		pdf.add_page()
+		pdf.set_font('Arial', 'B', 11)
+		pdf.cell(0, 8, 'Listagem de Notas Emitidas (NFSe)', ln=1)
+		pdf.set_font('Arial', '', 9)
+		pdf.cell(0, 6, f"Empresa: {current_user.empresa.nome if current_user.empresa else '-'} | CNPJ: {current_user.empresa.cnpj if current_user.empresa else '-'}", ln=1)
+		pdf.cell(0, 6, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=1)
+		pdf.ln(2)
+		if formato == 'pdf':
+			try:
+				from fpdf import FPDF
+			except ImportError:
+				flash('Exportação para PDF indisponível: biblioteca "fpdf" não está instalada no ambiente.', 'warning')
+				return redirect(url_for('relatorios.listagem_notas_nfse', **request.args))
+			pdf = FPDF(orientation='L', unit='mm', format='A4')
+			pdf.add_page()
+			pdf.set_font('Arial', 'B', 11)
+			pdf.cell(0, 8, 'Listagem de Notas Emitidas (NFSe)', ln=1)
+			pdf.set_font('Arial', '', 9)
+			pdf.cell(0, 6, f"Empresa: {current_user.empresa.nome if current_user.empresa else '-'} | CNPJ: {current_user.empresa.cnpj if current_user.empresa else '-'}", ln=1)
+			pdf.cell(0, 6, f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=1)
+			pdf.ln(2)
+			headers = [
+				('ID', 10), ('Empresa', 16), ('Nº Nota', 14), ('Emissão', 16),
+				('CNPJ Tomador', 26), ('Cliente', 30), ('Vlr Bruto', 16), ('Aliq. ISS', 12), ('Impostos', 16),
+				('Status', 14), ('Venc.', 16), ('Pagto.', 16), ('Serviço', 30)
+			]
+			pdf.set_font('Arial', 'B', 8)
+			for titulo, largura in headers:
+				pdf.cell(largura, 7, titulo, 1)
+			pdf.ln()
+			pdf.set_font('Arial', '', 7)
+			for n in notas:
+				valor_imposto = float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+				pdf.cell(10, 6, str(n.id), 1)
+				pdf.cell(16, 6, str(n.empresa_id), 1)
+				pdf.cell(14, 6, (n.numero_nota or '')[:10], 1)
+				pdf.cell(16, 6, n.data_emissao.strftime('%d/%m/%Y') if n.data_emissao else '', 1)
+				pdf.cell(26, 6, (n.cnpj_tomador or '')[:16], 1)
+				pdf.cell(30, 6, (n.entidade.nome if n.entidade else '')[:20], 1)
+				pdf.cell(16, 6, f"{float(n.valor_bruto or 0):,.2f}", 1, align='R')
+				pdf.cell(12, 6, f"{float(n.aliquota_comissao_especifica or 0):.2f}", 1, align='R')
+				pdf.cell(16, 6, f"{valor_imposto:,.2f}", 1, align='R')
+				pdf.cell(14, 6, (n.lancamento.status if n.lancamento else ''), 1)
+				pdf.cell(16, 6, n.lancamento.data_vencimento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_vencimento else '', 1)
+				pdf.cell(16, 6, n.lancamento.data_pagamento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_pagamento else '', 1)
+				pdf.cell(30, 6, (n.descricao_servico or '')[:20], 1)
+				pdf.ln()
+			pdf.set_font('Arial', 'B', 8)
+			pdf.cell(10+16+14+16+26+30+16+12+16+14+16+16+30, 7, 'TOTAIS', 1)
+			pdf.cell(16, 7, f"{float(sum([float(n.valor_bruto or 0) for n in notas])):,.2f}", 1, align='R')
+			pdf.cell(12, 7, '', 1)
+			pdf.cell(16, 7, f"{float(sum([
+				float(n.lancamento.valor_imposto) if n.lancamento and n.lancamento.valor_imposto is not None else float(n.valor_impostos or 0)
+				for n in notas
+			])):,.2f}", 1, align='R')
+			pdf.ln()
+			output = io.BytesIO()
+			output.write(pdf.output(dest='S').encode('latin1'))
+			output.seek(0)
+			return send_file(output, as_attachment=True, download_name='listagem_notas_nfse.pdf', mimetype='application/pdf')
 try:
 	from openpyxl import Workbook
 except Exception:
@@ -18,7 +259,6 @@ except Exception:
 
 
 # Definição do blueprint deve vir logo após os imports principais
-relatorios_bp = Blueprint('relatorios', __name__, url_prefix='/relatorios')
 def _parse_date_filter(value, field_label):
 	if not value:
 		return None
