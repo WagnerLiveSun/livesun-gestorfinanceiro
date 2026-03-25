@@ -310,17 +310,17 @@
                 </div>
                 <ul class="ls-sidebar-nav">
                     <li>
-                        <a class="ls-sidebar-link {% if request.endpoint.startswith('entidades') %}active{% endif %}" href="{{ url_for('entidades.index') }}">
+                        <a class="ls-sidebar-link {% if request.endpoint and request.endpoint.startswith('entidades') %}active{% endif %}" href="{{ url_for('entidades.index') }}">
                             <i class="fas fa-users"></i> Entidades
                         </a>
                     </li>
                     <li>
-                        <a class="ls-sidebar-link {% if request.endpoint.startswith('fluxo') %}active{% endif %}" href="{{ url_for('fluxo.index') }}">
+                        <a class="ls-sidebar-link {% if request.endpoint and request.endpoint.startswith('fluxo') %}active{% endif %}" href="{{ url_for('fluxo.index') }}">
                             <i class="fas fa-stream"></i> Fluxo Caixa
                         </a>
                     </li>
                     <li>
-                        <a class="ls-sidebar-link {% if request.endpoint.startswith('contas_banco') %}active{% endif %}" href="{{ url_for('contas_banco.index') }}">
+                        <a class="ls-sidebar-link {% if request.endpoint and request.endpoint.startswith('contas_banco') %}active{% endif %}" href="{{ url_for('contas_banco.index') }}">
                             <i class="fas fa-university"></i> Contas Banco
                         </a>
                     </li>
@@ -331,7 +331,7 @@
                 </div>
                 <ul class="ls-sidebar-nav">
                     <li>
-                        <a class="ls-sidebar-link {% if request.endpoint.startswith('lancamentos') %}active{% endif %}" href="{{ url_for('lancamentos.index') }}">
+                        <a class="ls-sidebar-link {% if request.endpoint and request.endpoint.startswith('lancamentos') %}active{% endif %}" href="{{ url_for('lancamentos.index') }}">
                             <i class="fas fa-receipt"></i> Lançamentos
                         </a>
                     </li>

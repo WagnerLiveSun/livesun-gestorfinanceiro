@@ -28,13 +28,15 @@ class Entidade(db.Model):
     ativo = db.Column(db.Boolean, default=True)
 
     def get_tipo_descricao(self):
-        """Retorna a descrição do tipo da entidade (C=Cliente, F=Fornecedor, V=Funcionário, etc)."""
+        """Retorna a descrição do tipo da entidade (C=Cliente, F=Fornecedor, V=Vendedor, L=Colaborador, etc)."""
         if self.tipo == 'C':
             return 'Cliente'
         elif self.tipo == 'F':
             return 'Fornecedor'
         elif self.tipo == 'V':
-            return 'Funcionário'
+            return 'Vendedor'
+        elif self.tipo == 'L':
+            return 'Colaborador'
         elif self.tipo:
             return self.tipo
         return 'Não definido'
