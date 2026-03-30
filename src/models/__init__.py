@@ -175,6 +175,8 @@ class ImportacaoNFSe(db.Model):
     # Contrato/Produto
     contrato_produto = db.Column(db.Text)
     
+    # Alíquota do ISS extraída do XML
+    aliquota_iss = db.Column(db.Numeric(5, 2), nullable=True)  # Alíquota ISS (%)
     # Campos para comissão (aplicável apenas a CLIENTE)
     aliquota_comissao_especifica = db.Column(db.Numeric(5, 2), nullable=True)  # Percentual específico
     valor_repasse = db.Column(db.Numeric(10, 2), default=0.00)  # Valor fixo de repasse ao fornecedor

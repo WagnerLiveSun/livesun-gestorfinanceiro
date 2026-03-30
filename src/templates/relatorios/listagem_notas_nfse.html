@@ -161,12 +161,12 @@
           <td>{{ n.cnpj_tomador }}</td>
           <td>{{ n.entidade.nome if n.entidade }}</td>
           <td class="text-end">{{ '%.2f'|format(n.valor_bruto or 0) }}</td>
-          <td class="text-end">{{ '%.2f'|format(n.aliquota_comissao_especifica or 0) }}</td>
+          <td class="text-end">{{ '%.2f'|format(n.aliquota_iss or 0) }}</td>
           <td class="text-end">{{ '%.2f'|format(get_valor_imposto(n)) }}</td>
           <td>{{ n.lancamento.status if n.lancamento }}</td>
           <td>{{ n.lancamento.data_vencimento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_vencimento }}</td>
           <td>{{ n.lancamento.data_pagamento.strftime('%d/%m/%Y') if n.lancamento and n.lancamento.data_pagamento }}</td>
-          <td class="col-desc" title="{{ n.descricao_servico|e }}">{{ n.descricao_servico[:50] ~ ('...' if n.descricao_servico and n.descricao_servico|length > 50 else '') }}</td>
+          <td class="col-desc" title="{{ n.descricao_servico|e }}">{{ n.descricao_servico[:80] ~ ('...' if n.descricao_servico and n.descricao_servico|length > 80 else '') }}</td>
         </tr>
         {% else %}
         <tr>

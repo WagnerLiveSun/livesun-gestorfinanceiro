@@ -67,9 +67,9 @@ def extrair_dados_nfse(xml_content: str):
         if not aliquota_iss or aliquota_iss.strip() in ('', '0', '0.0', '0,0'):
             # 2. Busca global por pTotTribSN (Simples Nacional)
             p_tot_trib_sn_nodes = root.findall('.//n:pTotTribSN', ns)
-            logging.debug(f"[DEBUG] Encontrados {len(p_tot_trib_sn_nodes)} pTotTribSN no XML:")
+            logging.debug(f"[DEBUG] Encontrados {len(p_tot_trib_sn_nodes)} pTotTribSN no XML: - importacoes.py:70")
             for idx, node in enumerate(p_tot_trib_sn_nodes):
-                logging.debug(f" [DEBUG] pTotTribSN #{idx+1}: '{node.text}'")
+                logging.debug(f"[DEBUG] pTotTribSN #{idx+1}: '{node.text}' - importacoes.py:72")
             if p_tot_trib_sn_nodes and p_tot_trib_sn_nodes[0].text:
                 aliquota_iss = p_tot_trib_sn_nodes[0].text
                 debug_origem = 'pTotTribSN-global'
@@ -77,43 +77,44 @@ def extrair_dados_nfse(xml_content: str):
                 aliquota_iss = ''
                 debug_origem = 'nenhum'
 
-        # 3. Fallback: se ainda não achou alíquota, tenta último número da linha de serviço
+        # 3. Fallback: se ainda não achou alíquota, tenta extrair da descrição do serviço (xDescServ)
         if not aliquota_iss or aliquota_iss.strip() in ('', '0', '0.0', '0,0'):
             try:
-                textos = []
-                for elem in inf_nfse.iter():
-                    if elem.text and elem.text.strip():
-                        textos.append(elem.text.strip())
-
+                desc_serv = inf_nfse.findtext('.//n:xDescServ', default='', namespaces=ns)
                 import re
                 candidata = ''
-                for t in reversed(textos):
-                    norm = re.sub(r'[^0-9\.,]', '', t).replace(',', '.')
-                    if not norm:
-                        continue
-                    try:
-                        v = float(norm)
-                    except ValueError:
-                        continue
-                    # Heurística: ISS entre 0 e 20%
-                    if 0 < v <= 20:
-                        candidata = norm
-                        break
-
+                if desc_serv:
+                    # Busca todos os números (com vírgula ou ponto) na descrição
+                    matches = re.findall(r'[0-9]+[\.,][0-9]+', desc_serv)
+                    # Percorre de trás para frente
+                    for m in reversed(matches):
+                        norm = m.replace(',', '.')
+                        try:
+                            v = float(norm)
+                        except ValueError:
+                            continue
+                        if 0 < v <= 20:
+                            candidata = norm
+                            break
                 if candidata:
                     aliquota_iss = candidata
-                    debug_origem = 'fallback-linha-servico'
+                    debug_origem = 'fallback-xDescServ'
             except Exception as e:
-                logging.debug(f"[DEBUG] Erro no fallback de linha de serviço para alíquota ISS: {e}")
+                logging.debug(f"[DEBUG] Erro no fallback de xDescServ para alíquota ISS: {e} - importacoes.py:103")
 
-        logging.debug(f"[DEBUG] Alíquota ISS extraída: '{aliquota_iss}' (origem: {debug_origem})")
+        # 4. Se ainda não encontrou, usar padrão 6%
+        if not aliquota_iss or aliquota_iss.strip() in ('', '0', '0.0', '0,0'):
+            aliquota_iss = '6.0'
+            debug_origem = 'padrao-6'
+
+        logging.debug(f"[DEBUG] Alíquota ISS extraída: '{aliquota_iss}' (origem: {debug_origem}) - importacoes.py:110")
 
         dados = {
             'numero_nota': inf_nfse.findtext('n:nNFSe', default='', namespaces=ns),
             'data_emissao': inf_nfse.findtext('n:dhProc', default='', namespaces=ns),
             'cnpj_tomador': inf_nfse.findtext('n:DPS/n:infDPS/n:toma/n:CNPJ', default='', namespaces=ns),
             'valor_bruto_str': inf_nfse.findtext('n:valores/n:vLiq', default='', namespaces=ns),
-            'descricao_servico': inf_nfse.findtext('n:xTribNac', default='', namespaces=ns),
+            'descricao_servico': root.findtext('.//n:xDescServ', default='', namespaces=ns),
             'chave_nota': inf_nfse.get('Id') or '',
             'aliquota_iss_str': aliquota_iss,
             'debug_aliquota_iss_origem': debug_origem,
@@ -156,7 +157,7 @@ def validar_dados_nfse(dados: dict):
     try:
         dados['aliquota_iss'] = float(aliquota_iss_str) if aliquota_iss_str else 0.0
     except Exception as e:
-        logging.debug(f"[DEBUG] Erro ao converter aliquota_iss_str='{aliquota_iss_str}' para float: {e}")
+        logging.debug(f"[DEBUG] Erro ao converter aliquota_iss_str='{aliquota_iss_str}' para float: {e} - importacoes.py:160")
         dados['aliquota_iss'] = 0.0
 
     # Calcula o valor do ISS
@@ -264,38 +265,38 @@ def processar_xml_nfse_completo(xml_content: str, empresa_id: int):
     cria lançamento e registro de ImportacaoNFSe.
     """
     dados, erro = extrair_dados_nfse(xml_content)
-    if erro:
-        return False, erro
+    if erro or not dados:
+        return False, f'Erro ao extrair dados do XML: {erro or "dados não extraídos"}'
 
-    # Ajusta chave_nota para deduplicação
-    if not dados.get('chave_nota'):
-        dados['chave_nota'] = f"{dados.get('numero_nota', '')}-{dados.get('cnpj_tomador', '')}"
-
-    # Deduplicação
-    existe = ImportacaoNFSe.query.filter_by(
-        empresa_id=empresa_id,
-        chave_nota=dados['chave_nota']
-    ).first()
-    if existe:
-        return False, f'Nota já importada: {dados["chave_nota"]}'
-
-    # Validação de campos + conversão de valor
-    valido, erro_validacao = validar_dados_nfse(dados)
-    if not valido:
-        return False, erro_validacao
-
-    # Entidade
-    entidade, erro_entidade = obter_ou_criar_entidade(empresa_id, dados['cnpj_tomador'])
-    if not entidade:
-        return False, erro_entidade
-
-    # Lançamento
-    ok_lanc, erro_lanc = criar_lancamento_nfse(empresa_id, entidade, dados)
-    if not ok_lanc:
-        return False, erro_lanc
-
-    # Registro de importação
     try:
+        # Ajusta chave_nota para deduplicação
+        if not dados.get('chave_nota'):
+            dados['chave_nota'] = f"{dados.get('numero_nota', '')}-{dados.get('cnpj_tomador', '')}"
+
+        # Deduplicação
+        existe = ImportacaoNFSe.query.filter_by(
+            empresa_id=empresa_id,
+            chave_nota=dados['chave_nota']
+        ).first()
+        if existe:
+            return False, f'Nota já importada: {dados["chave_nota"]}'
+
+        # Validação de campos + conversão de valor
+        valido, erro_validacao = validar_dados_nfse(dados)
+        if not valido:
+            return False, erro_validacao
+
+        # Entidade
+        entidade, erro_entidade = obter_ou_criar_entidade(empresa_id, dados['cnpj_tomador'])
+        if not entidade:
+            return False, erro_entidade
+
+        # Lançamento
+        ok_lanc, erro_lanc = criar_lancamento_nfse(empresa_id, entidade, dados)
+        if not ok_lanc:
+            return False, erro_lanc
+
+        # Registro de importação
         registro = ImportacaoNFSe(
             empresa_id=empresa_id,
             chave_nota=dados['chave_nota'],
@@ -306,13 +307,14 @@ def processar_xml_nfse_completo(xml_content: str, empresa_id: int):
             valor_impostos=None,
             descricao_servico=dados.get('descricao_servico') or '',
             entidade_id=entidade.id,
+            aliquota_iss=dados.get('aliquota_iss', 0.0),
         )
         db.session.add(registro)
         db.session.commit()
         return True, f'Nota importada: {dados["chave_nota"]}'
     except Exception as e:
         db.session.rollback()
-        return False, f'Erro ao salvar registro de importação: {str(e)}'
+        return False, f'Erro inesperado no processamento da NFSe: {str(e)}'
 
 
 def processar_arquivo_nfse(file_path: str, empresa_id: int, mensagens: list):
@@ -399,8 +401,13 @@ def importar_nfse():
 
                 from decimal import Decimal
                 # Aceita tanto valor_imposto quanto valor_iss do formulário
-                valor_imposto_form = request.form.get('valor_imposto') or request.form.get('valor_iss')
-                valor_imposto = Decimal(str(valor_imposto_form).replace(',', '.')) if valor_imposto_form not in (None, '', 'None') else Decimal('0.00')
+                # Usar a alíquota do ISS do espelho para calcular o valor do imposto
+                aliquota_iss_str = request.form.get('aliquota_iss')
+                try:
+                    aliquota_iss = float(str(aliquota_iss_str).replace(',', '.')) if aliquota_iss_str not in (None, '', 'None') else 0.0
+                except Exception:
+                    aliquota_iss = 0.0
+                valor_imposto = Decimal(str(valor_bruto * aliquota_iss / 100)) if valor_bruto and aliquota_iss else Decimal('0.00')
 
                 lancamento = Lancamento(
                     empresa_id=empresa_id,
@@ -432,6 +439,7 @@ def importar_nfse():
                     descricao_servico=descricao_servico or '',
                     entidade_id=entidade.id,
                     lancamento_id=lancamento.id,
+                    aliquota_iss=aliquota_iss,
                 )
                 db.session.add(registro)
                 db.session.commit()
