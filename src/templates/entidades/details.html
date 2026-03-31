@@ -141,10 +141,10 @@
                 <div class="col-md-4 mb-3">
                     <p class="text-muted mb-1">Vendedor Padrão</p>
                     <p style="color: #e5e7eb;">
-                        {% if entidade.vendedor_padrao %}
-                            {{ entidade.vendedor_padrao.nome }}
-                        {% elif entidade.entidade_vendedor_padrao_id %}
-                            {{ entidade.entidade_vendedor_padrao_id }}
+                        {% if entidade.vendedor %}
+                            {{ entidade.vendedor.nome }}
+                        {% elif entidade.vendedor_id %}
+                            {{ entidade.vendedor_id }}
                         {% else %}
                             <span class="text-muted">Não definido</span>
                         {% endif %}

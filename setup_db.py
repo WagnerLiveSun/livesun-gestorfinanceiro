@@ -150,7 +150,7 @@ def setup_database(app, init_only=False):
                         email='cliente@example.com',
                         aliquota_comissao_especifica=None,
                         valor_repasse=0.00,
-                        entidade_vendedor_padrao_id=vendedor.id,
+                        vendedor_id=vendedor.id,
                         ativo=True
                     )
                     db.session.add(cliente)

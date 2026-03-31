@@ -144,8 +144,8 @@ def editar(id):
             aliquota = request.form.get('aliquota_comissao_especifica')
             entidade.aliquota_comissao_especifica = aliquota if aliquota else None
             entidade.valor_repasse = request.form.get('valor_repasse') or 0
-            vendedor_id = request.form.get('entidade_vendedor_padrao_id')
-            entidade.entidade_vendedor_padrao_id = vendedor_id if vendedor_id else None
+            vendedor_id = request.form.get('vendedor_id')
+            entidade.vendedor_id = vendedor_id if vendedor_id else None
             
             db.session.commit()
             

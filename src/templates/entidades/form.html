@@ -182,12 +182,12 @@
 
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Vendedor Padrão</label>
-                    <select name="entidade_vendedor_padrao_id" class="form-control" 
+                    <select name="vendedor_id" class="form-control" 
                         style="background-color: rgba(30, 41, 59, 0.8); border-color: rgba(148, 163, 184, 0.25); color: #e5e7eb;">
                         <option value="">Selecione um vendedor...</option>
                         {% if vendedores %}
                         {% for vendedor in vendedores %}
-                        <option value="{{ vendedor.id }}" {% if entidade and entidade.entidade_vendedor_padrao_id == vendedor.id %}selected{% endif %}>
+                        <option value="{{ vendedor.id }}" {% if entidade and entidade.vendedor_id == vendedor.id %}selected{% endif %}>
                             {{ vendedor.nome }}
                         </option>
                         {% endfor %}

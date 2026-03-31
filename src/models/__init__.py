@@ -21,8 +21,8 @@ class Entidade(db.Model):
     # Campos de comissão
     aliquota_comissao_especifica = db.Column(db.Numeric(5, 2), nullable=True)  # Percentual específico
     valor_repasse = db.Column(db.Numeric(10, 2), default=0.00)  # Valor fixo de repasse ao fornecedor
-    entidade_vendedor_padrao_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True)  # Vendedor padrão
-    entidade_vendedor_padrao = db.relationship('Entidade', remote_side='Entidade.id', foreign_keys=[entidade_vendedor_padrao_id], backref='clientes_vinculados')
+    vendedor_id = db.Column(db.Integer, db.ForeignKey('entidades.id'), nullable=True)  # Vendedor padrão
+    vendedor = db.relationship('Entidade', remote_side='Entidade.id', foreign_keys=[vendedor_id], backref='clientes_vinculados')
     criado_em = db.Column(db.DateTime, default=datetime.utcnow)
     atualizado_em = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     ativo = db.Column(db.Boolean, default=True)

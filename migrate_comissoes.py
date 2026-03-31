@@ -72,12 +72,12 @@ def run_migrations():
                 print("  ALTER TABLE entidades ADD COLUMN valor_repasse DECIMAL(10,2) DEFAULT 0.00;")
             
             try:
-                cursor.execute("SELECT entidade_vendedor_padrao_id FROM entidades LIMIT 1")
-                print("✓ Campo 'entidade_vendedor_padrao_id' em entidades já existe")
+                cursor.execute("SELECT vendedor_id FROM entidades LIMIT 1")
+                print("✓ Campo 'vendedor_id' em entidades já existe")
             except Exception as e:
-                print("⚠ Campo 'entidade_vendedor_padrao_id' pode precisar ser criado:")
-                print("  ALTER TABLE entidades ADD COLUMN entidade_vendedor_padrao_id INT;")
-                print("  ALTER TABLE entidades ADD FOREIGN KEY (entidade_vendedor_padrao_id) REFERENCES entidades(id);")
+                print("⚠ Campo 'vendedor_id' pode precisar ser criado:")
+                print("  ALTER TABLE entidades ADD COLUMN vendedor_id INT;")
+                print("  ALTER TABLE entidades ADD FOREIGN KEY (vendedor_id) REFERENCES entidades(id);")
             
             cursor.close()
             conn.close()

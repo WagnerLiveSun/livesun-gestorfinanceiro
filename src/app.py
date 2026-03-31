@@ -217,7 +217,7 @@ def _ensure_schema_compatibility():
             {
                 'aliquota_comissao_especifica': 'aliquota_comissao_especifica DECIMAL(5,2) NULL',
                 'valor_repasse': 'valor_repasse DECIMAL(10,2) DEFAULT 0.00',
-                'entidade_vendedor_padrao_id': 'entidade_vendedor_padrao_id INTEGER NULL'
+                'vendedor_id': 'vendedor_id INTEGER NULL'
             }
         )
 

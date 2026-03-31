@@ -190,15 +190,15 @@ class ServicoComissoes:
                 if lancamento.entidade.tipo != 'C':
                     continue
                 
-                # Obter ou usar vendedor padrão do cliente
-                vendedor = lancamento.entidade.vendedor_padrao
-                if not vendedor or vendedor_id and vendedor.id != vendedor_id:
+                # Obter vendedor do cliente ou fallback para entidade_vendedor_padrao
+                vendedor = lancamento.entidade.vendedor or getattr(lancamento.entidade, 'entidade_vendedor_padrao', None)
+                if not vendedor or (vendedor_id and vendedor.id != vendedor_id):
                     if vendedor_id:
                         # Filtro de vendedor não corresponde
                         continue
                     else:
                         # Sem vendedor padrão, pular
-                        logger.warning(f"Lançamento {lancamento.id} sem vendedor definido")
+                        logger.warning(f"Lançamento {lancamento.id} sem vendedor definido nem fallback em entidade_vendedor_padrao")
                         continue
                 
                 # Verificar se já foi apurado
