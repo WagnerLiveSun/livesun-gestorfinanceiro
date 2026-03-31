@@ -124,7 +124,10 @@
                     {% for comissao in resumo.comissoes %}
                     <tr>
                         <td>{{ comissao.dt_pagamento_recebimento.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ comissao.cliente.nome }}</td>
+                        <td>
+                            {% set cliente = entidades | selectattr('id', 'equalto', comissao.entidade_cliente_id) | first %}
+                            {{ cliente.nome if cliente else '' }}
+                        </td>
                         <td class="text-end">R$ {{ comissao.vl_nota | brl }}</td>
                         <td class="text-end">R$ {{ comissao.vl_imposto | brl }}</td>
                         <td class="text-end">R$ {{ comissao.vl_outros_custos | brl }}</td>

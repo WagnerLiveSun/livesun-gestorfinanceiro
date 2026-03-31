@@ -138,8 +138,11 @@
                                 <span class="badge bg-info">{{ comissao.id_apuracao }}</span>
                             </td>
                             <td>{{ comissao.dt_pagamento_recebimento.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ comissao.cliente.nome }}</td>
-                            <td>{{ comissao.vendedor.nome }}</td>
+                            <td>{{ comissao.lancamento.entidade.nome }}</td>
+                            <td>
+                                {% set vendedor = vendedores | selectattr('id', 'equalto', comissao.entidade_vendedor_id) | first %}
+                                {{ vendedor.nome if vendedor else '' }}
+                            </td>
                             <td class="text-end">R$ {{ comissao.vl_nota | brl }}</td>
                             <td class="text-end">R$ {{ comissao.vl_imposto | brl }}</td>
                             <td class="text-end">R$ {{ comissao.vl_outros_custos | brl }}</td>

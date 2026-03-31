@@ -150,16 +150,14 @@ class ServicoComissoes:
         """
         inicio_msg = f"Iniciando apuração de comissões: {data_inicio} a {data_fim}"
         logger.info(inicio_msg)
-        
+
         resultado = {
-            'sucesso': False,
-            'id_apuracao': None,
-            'total_lancamentos': 0,
+            'sucesso': True,
+            'mensagem': '',
             'total_comissoes': Decimal('0.00'),
-            'registros_criados': 0,
-            'mensagem': ''
+            'registros_criados': 0
         }
-        
+
         try:
             # Gerar novo ID de apuração (sequence)
             max_apuracao = db.session.query(func.max(Comissao.id_apuracao)).filter_by(
@@ -192,24 +190,22 @@ class ServicoComissoes:
                 
                 # Obter vendedor do cliente ou fallback para entidade_vendedor_padrao
                 vendedor = lancamento.entidade.vendedor or getattr(lancamento.entidade, 'entidade_vendedor_padrao', None)
-                if not vendedor or (vendedor_id and vendedor.id != vendedor_id):
-                    if vendedor_id:
-                        # Filtro de vendedor não corresponde
-                        continue
-                    else:
-                        # Sem vendedor padrão, pular
-                        logger.warning(f"Lançamento {lancamento.id} sem vendedor definido nem fallback em entidade_vendedor_padrao")
-                        continue
-                
-                # Verificar se já foi apurado
-                if ServicoComissoes.lancamento_ja_apurado(
-                    lancamento.id,
-                    lancamento.entidade_id,
-                    vendedor.id,
-                    empresa_id
-                ):
-                    logger.info(f"Lançamento {lancamento.id} já apurado, pulando")
+                if not vendedor:
+                    logger.warning(f"Lançamento {lancamento.id} sem vendedor definido")
                     continue
+                
+                if vendedor_id and vendedor.id != vendedor_id:
+                    continue
+                
+                # Remove comissões anteriores deste lançamento (se houver)
+                Comissao.query.filter_by(
+                    empresa_id=empresa_id,
+                    lancamento_id=lancamento.id,
+                    entidade_cliente_id=lancamento.entidade_id,
+                    entidade_vendedor_id=vendedor.id,
+                    situacao='ativo'
+                ).delete()
+                db.session.flush()
                 
                 # Calcular comissão
                 vl_liquido = ServicoComissoes.calcular_valor_liquido(
@@ -237,7 +233,7 @@ class ServicoComissoes:
                     dt_lancamento=lancamento.data_evento,
                     dt_vencimento=lancamento.data_vencimento,
                     dt_pagamento_recebimento=lancamento.data_pagamento,
-                    vl_nota=Decimal(str(lancamento.valor_real)),
+                    vl_nota=Decimal(str(lancamento.valor_real or 0)),
                     vl_imposto=Decimal(str(lancamento.valor_imposto or 0)),
                     vl_outros_custos=Decimal(str(lancamento.valor_outros_custos or 0)),
                     vl_repasse=vl_repasse,
@@ -256,26 +252,18 @@ class ServicoComissoes:
             
             # Commit da transação
             db.session.commit()
-            
-            resultado['sucesso'] = True
-            resultado['id_apuracao'] = id_apuracao
-            resultado['total_lancamentos'] = len(lancamentos)
+
             resultado['registros_criados'] = total_lancamentos_processados
             resultado['total_comissoes'] = total_comissao
-            resultado['mensagem'] = (
-                f"Apuração concluída com sucesso! "
-                f"{total_lancamentos_processados} lançamentos processados, "
-                f"Total de comissões: R$ {total_comissao}"
-            )
-            
+            resultado['mensagem'] = f"Apuração concluída. {total_lancamentos_processados} registros criados. Total comissões: R$ {total_comissao}"
             logger.info(resultado['mensagem'])
-            
+
         except Exception as e:
             db.session.rollback()
             resultado['sucesso'] = False
             resultado['mensagem'] = f"Erro na apuração: {str(e)}"
             logger.error(resultado['mensagem'], exc_info=True)
-        
+
         return resultado
     
     @staticmethod
@@ -352,27 +340,29 @@ class ServicoComissoes:
         comissoes = query.all()
         
         # Agrupar por vendedor
+        # Carregar todos os vendedores em um dicionário para acesso rápido
+        vendedor_ids = set(c.entidade_vendedor_id for c in comissoes)
+        vendedores = Entidade.query.filter(Entidade.id.in_(vendedor_ids)).all()
+        vendedores_dict = {v.id: v for v in vendedores}
+
         resumo = {}
-        
         for comissao in comissoes:
             vendedor_id = comissao.entidade_vendedor_id
-            
+            vendedor = vendedores_dict.get(vendedor_id)
             if vendedor_id not in resumo:
                 resumo[vendedor_id] = {
-                    'vendedor': comissao.vendedor,
+                    'vendedor': vendedor,  # Objeto Entidade
                     'total_notas': Decimal('0.00'),
                     'total_repasse': Decimal('0.00'),
                     'total_liquido': Decimal('0.00'),
-                    'total_comissao': Decimal('0.00'),
+                    'total_comissoes': Decimal('0.00'),
                     'quantidade_lancamentos': 0,
                     'comissoes': []
                 }
-            
             resumo[vendedor_id]['total_notas'] += comissao.vl_nota
             resumo[vendedor_id]['total_repasse'] += comissao.vl_repasse
             resumo[vendedor_id]['total_liquido'] += comissao.vl_liquido
-            resumo[vendedor_id]['total_comissao'] += comissao.vl_comissao
+            resumo[vendedor_id]['total_comissoes'] += comissao.vl_comissao
             resumo[vendedor_id]['quantidade_lancamentos'] += 1
             resumo[vendedor_id]['comissoes'].append(comissao)
-        
         return list(resumo.values())
