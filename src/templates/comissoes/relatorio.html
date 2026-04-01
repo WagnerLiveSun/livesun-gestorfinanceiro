@@ -125,7 +125,7 @@
                     <tr>
                         <td>{{ comissao.dt_pagamento_recebimento.strftime('%d/%m/%Y') }}</td>
                         <td>
-                            {% set cliente = entidades | selectattr('id', 'equalto', comissao.entidade_cliente_id) | first %}
+                            {% set cliente = clientes | selectattr('id', 'equalto', comissao.entidade_cliente_id) | first %}
                             {{ cliente.nome if cliente else '' }}
                         </td>
                         <td class="text-end">R$ {{ comissao.vl_nota | brl }}</td>
@@ -147,7 +147,7 @@
                         <td class="text-end">R$ {{ resumo.total_liquido | brl }}</td>
                         <td colspan="1"></td>
                         <td class="text-end"></td>
-                        <td class="text-end bg-success bg-opacity-25">R$ {{ resumo.total_comissao | brl }}</td>
+                        <td class="text-end bg-success bg-opacity-25">R$ {{ resumo.total_comissoes | brl }}</td>
                     </tr>
                 </tfoot>
             </table>

@@ -332,7 +332,7 @@ def exportar_csv():
             f"{resumo['total_notas']:.2f}".replace('.', ','),
             f"{resumo['total_repasse']:.2f}".replace('.', ','),
             f"{resumo['total_liquido']:.2f}".replace('.', ','),
-            f"{resumo['total_comissao']:.2f}".replace('.', ',')
+            f"{resumo['total_comissoes']:.2f}".replace('.', ',')
         ])
     
     # Retornar como arquivo
